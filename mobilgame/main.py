@@ -74,7 +74,7 @@ rocket_cooldown_duration = 20  # 2 seconds at 60 FPS
 
 Hearts_image = pygame.image.load("pictures/heart.png")
 Hears = pygame.transform.scale(Hearts_image, (50, 50))
-hearts_delay = 300
+hearts_delay = 1
 hearts_timer = 0
 
 # List to hold active hearts
@@ -96,6 +96,12 @@ score = 0  # Current score
 font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
 
 road_scroll_y = 0
+
+# Load police bullet image
+police_bullet_image = pygame.image.load("pictures/bullet.png")
+police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
+
+police_bullets = []  # List to hold police bullets
 
 while running:
     clock.tick(60)
@@ -184,6 +190,12 @@ while running:
     police_cars = [car for car in police_cars if car[1] < HEIGHT // 2]
 
 
+    # Spawn hearts randomly (e.g., 0.5% chance per frame, and limit number of hearts)
+    if len(hearts) < 2 and random.randint(1, 200) == 1:
+        heart_x = random.randint(0, WIDTH - 50)
+        heart_y = -50  # Start above the screen
+        hearts.append([heart_x, heart_y])
+
     for heart in hearts:
         heart[1] += line_speed 
         screen.blit(Hears, (heart[0], heart[1]))
@@ -219,6 +231,33 @@ while running:
                 break
     
     bullets = [bullet for bullet in bullets if bullet[1] > 0]
+
+    # Police cars shoot bullets
+    for car in police_cars:
+        # 1% chance per frame to shoot a bullet
+        if random.randint(1, 100) == 1:
+            bullet_x = car[0] + police_car_width // 2 - police_bullet_image.get_width() // 2
+            bullet_y = car[1] + police_car_height
+            police_bullets.append([bullet_x, bullet_y])
+
+    # Move police bullets and check collision with player
+    for bullet in police_bullets[:]:
+        bullet[1] += 10  # Bullet speed
+        screen.blit(police_bullet_image, (bullet[0], bullet[1]))
+
+        # Collision with forklift
+        if (forklift_x < bullet[0] + police_bullet_image.get_width() and
+            forklift_x + forklift_width > bullet[0] and
+            forklift_y < bullet[1] + police_bullet_image.get_height() and
+            forklift_y + forklift_height > bullet[1]):
+            forklift_health = max(0, forklift_health - 10)
+            police_bullets.remove(bullet)
+            if forklift_health <= 0:
+                pygame.quit()
+                sys.exit()
+        # Remove if off screen
+        elif bullet[1] > HEIGHT:
+            police_bullets.remove(bullet)
 
     screen.blit(forklift_image, (forklift_x, forklift_y))
 
