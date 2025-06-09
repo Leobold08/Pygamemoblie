@@ -103,6 +103,60 @@ police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 
 police_bullets = []  # List to hold police bullets
 
+def main_menu():
+    menu_running = True
+
+    forklift_menu_image = pygame.image.load("pictures/forklift.png")
+    forklift_menu_image = pygame.transform.scale(forklift_menu_image, (forklift_width, forklift_height))
+
+    police_car_menu_image = pygame.image.load("pictures/police_car.png")
+    police_car_menu_image = pygame.transform.scale(police_car_menu_image, (police_car_width, police_car_height))
+
+
+    button_width = 200
+    button_height = 60
+    play_button_rect = pygame.Rect(WIDTH // 2 - button_width // 2, HEIGHT // 2 - 100, button_width, button_height)
+    quit_button_rect = pygame.Rect(WIDTH // 2 - button_width // 2, HEIGHT // 2 + 50, button_width, button_height)
+
+    while menu_running:
+        screen.fill(GRAY) 
+
+
+        screen.blit(forklift_menu_image, (WIDTH // 2 - forklift_width // 2, HEIGHT // 2 - 250))
+        screen.blit(police_car_menu_image, (WIDTH // 2 - police_car_width - 150, HEIGHT // 2 - 25))
+        screen.blit(police_car_menu_image, (WIDTH // 2 - police_car_width // 2, HEIGHT // 2 - 25))
+        screen.blit(police_car_menu_image, (WIDTH // 2 + police_car_width, HEIGHT // 2 - 25))
+
+   
+        pygame.draw.rect(screen, WHITE, play_button_rect)
+        pygame.draw.rect(screen, WHITE, quit_button_rect)
+
+        # Add text to buttons
+        font = pygame.font.SysFont(None, 48)
+        play_text = font.render("Play", True, BLACK)
+        quit_text = font.render("Quit", True, BLACK)
+        screen.blit(play_text, (play_button_rect.x + button_width // 2 - play_text.get_width() // 2,
+                                play_button_rect.y + button_height // 2 - play_text.get_height() // 2))
+        screen.blit(quit_text, (quit_button_rect.x + button_width // 2 - quit_text.get_width() // 2,
+                                quit_button_rect.y + button_height // 2 - quit_text.get_height() // 2))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                if play_button_rect.collidepoint(mouse_x, mouse_y):
+                    menu_running = False  # Start the game
+                elif quit_button_rect.collidepoint(mouse_x, mouse_y):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.flip()
+
+main_menu()
+
+
 while running:
     clock.tick(60)
 
