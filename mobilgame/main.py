@@ -38,14 +38,14 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # Get the current mouse position
+
     mouse_x, mouse_y = pygame.mouse.get_pos()
 
-    # Update forklift position to follow the cursor
+
     forklift_x = mouse_x - forklift_width // 2
 
 
-    # Ensure forklift stays within bounds
+
     forklift_x = max(60, min(WIDTH - forklift_width - 60, forklift_x))
     forklift_y = max(20, min(HEIGHT - forklift_height - 20, forklift_y))
 
