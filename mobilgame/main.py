@@ -95,6 +95,8 @@ score = 0  # Current score
 
 font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
 
+road_scroll_y = 0
+
 while running:
     clock.tick(60)
 
@@ -115,8 +117,14 @@ while running:
         if lines[i] > HEIGHT:
             lines[i] = -line_height
 
-    # Draw the road image fullscreen
-    screen.blit(road_image, (0, 0))  # Position the road image at the top-left corner
+    # Scroll the road image
+    road_scroll_y += line_speed
+    if road_scroll_y >= HEIGHT:
+        road_scroll_y = 0
+
+
+    screen.blit(road_image, (0, road_scroll_y - HEIGHT))  
+    screen.blit(road_image, (0, road_scroll_y)) 
 
     if pygame.mouse.get_pressed()[0]:
         forklift_speed = 10
@@ -129,37 +137,36 @@ while running:
     if pygame.mouse.get_pressed()[2] and rocket_cooldown == 0:  # Right mouse button
         bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
         bullet_y = forklift_y
-        bullets.append([bullet_x, bullet_y])  # Add bullet to the list
-        rocket_cooldown = rocket_cooldown_duration  # Reset cooldown timer
+        bullets.append([bullet_x, bullet_y]) 
+        rocket_cooldown = rocket_cooldown_duration 
 
     # Update cooldown timer
     if rocket_cooldown > 0:
         rocket_cooldown -= 1
 
-    police_spawn_timer += 1
-    if police_spawn_timer >= police_spawn_delay:
-        police_spawn_timer = 0
-        police_x = random.randint(0, WIDTH - police_car_width)
-        police_cars.append([police_x, -police_car_height])
-
-    # Spawn hearts periodically
-    hearts_timer += 1
-    if hearts_timer >= hearts_delay:
-        hearts_timer = 0
-        heart_x = random.randint(0, WIDTH - 120)
-        hearts.append([heart_x, -120])  # Add heart to the list
-
-    # Update invincibility timer
-    if invincible:
-        invincibility_timer += 1
-        if invincibility_timer >= invincibility_duration:
-            invincible = False
-            invincibility_timer = 0
+    # Increase difficulty by reducing spawn delay over time
+    # Limit the maximum number of police cars
+    if len(police_cars) < 7:
+        police_spawn_timer += 1
+        if police_spawn_timer >= police_spawn_delay:
+            police_spawn_timer = 0
+            police_x = random.randint(0, WIDTH - police_car_width)
+            police_cars.append([police_x, -police_car_height])  # Spawn new police car
 
     for car in police_cars:
+        # Move the police car downward
         car[1] += line_speed
+
+        # Optional: Add slight horizontal movement for dynamic effect
+        car[0] += random.choice([-1, 1])  # Move left or right randomly
+
+        # Ensure police cars stay above the bottom half of the screen
+        car[1] = min(car[1], HEIGHT // 2 - police_car_height)
+
+        # Draw the police car
         screen.blit(police_car_image, (car[0], car[1]))
 
+        # Check for collision with the forklift
         if (forklift_x < car[0] + police_car_width and
             forklift_x + forklift_width > car[0] and
             forklift_y < car[1] + police_car_height and
@@ -172,11 +179,13 @@ while running:
                 pygame.quit()
                 sys.exit()
 
-    police_cars = [car for car in police_cars if car[1] < HEIGHT]
 
-    # Update and draw hearts
+    # Remove police cars that go off-screen or are destroyed
+    police_cars = [car for car in police_cars if car[1] < HEIGHT // 2]
+
+
     for heart in hearts:
-        heart[1] += line_speed  # Move the heart downward
+        heart[1] += line_speed 
         screen.blit(Hears, (heart[0], heart[1]))
 
         # Check for collision with forklift
@@ -184,8 +193,8 @@ while running:
             forklift_x + forklift_width > heart[0] and
             forklift_y < heart[1] + 120 and
             forklift_y + forklift_height > heart[1]):
-            forklift_health = min(forklift_health + 10, max_health)  # Increase health
-            hearts.remove(heart)  # Remove the heart
+            forklift_health = min(forklift_health + 10, max_health)  
+            hearts.remove(heart)
 
     # Remove hearts that go off-screen
     hearts = [heart for heart in hearts if heart[1] < HEIGHT]
@@ -202,10 +211,9 @@ while running:
                 bullet[1] + bullet_image.get_height() > car[1]):
                 police_cars.remove(car) 
                 bullets.remove(bullet)
-                score += 10  # Increase score when police car destroyed
+                score += 10 
                 if score > highscore:
-                    highscore = score  # Update highscore if needed
-                    # Save new highscore to file
+                    highscore = score
                     with open(highscore_file, "w") as f:
                         f.write(str(highscore))
                 break
