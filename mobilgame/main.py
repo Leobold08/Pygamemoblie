@@ -36,7 +36,7 @@ for i in range(0, HEIGHT, line_height + line_spacing):
     lines.append(i)
 
 # Import the forklift image
-forklift_image = pygame.image.load("forklift.png")
+forklift_image = pygame.image.load("pictures/forklift.png")
 forklift_image = pygame.transform.scale(forklift_image, (forklift_width, forklift_height))
 
 clock = pygame.time.Clock()
