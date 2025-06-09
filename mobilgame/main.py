@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 
 pygame.init()
 
@@ -39,6 +40,15 @@ for i in range(0, HEIGHT, line_height + line_spacing):
 forklift_image = pygame.image.load("pictures/forklift.png")
 forklift_image = pygame.transform.scale(forklift_image, (forklift_width, forklift_height))
 
+# Import the police car image
+police_car_image = pygame.image.load("pictures/police_car.png")
+police_car_width, police_car_height = 120, 120
+police_car_image = pygame.transform.scale(police_car_image, (police_car_width, police_car_height))
+
+police_cars = []  # List to hold police car positions
+police_spawn_timer = 0
+police_spawn_delay = 90  # Frames between spawns
+
 clock = pygame.time.Clock()
 running = True
 
@@ -75,6 +85,21 @@ while running:
         if (forklift_health < 0):
             pygame.quit()
             sys.exit()
+
+    # Spawn police car at random x at the top
+    police_spawn_timer += 1
+    if police_spawn_timer >= police_spawn_delay:
+        police_spawn_timer = 0
+        police_x = random.randint(60, WIDTH - police_car_width - 60)
+        police_cars.append([police_x, -police_car_height])
+
+    # Move police cars down and draw them
+    for car in police_cars:
+        car[1] += line_speed  # Move down at same speed as lines
+        screen.blit(police_car_image, (car[0], car[1]))
+
+    # Remove police cars that move off the screen
+    police_cars = [car for car in police_cars if car[1] < HEIGHT]
 
     for y in lines:
         pygame.draw.rect(screen, WHITE, (WIDTH // 2 - line_width // 2, y, line_width, line_height * 2) )
