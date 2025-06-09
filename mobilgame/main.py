@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import os
 
 pygame.init()
 
@@ -15,7 +16,7 @@ BLACK = (0, 0, 0)
 CYEAN = (0, 255, 255)
 RED = (255, 0, 0)
 
-forklift_width = 150
+forklift_width = 90
 forklift_height = 150
 forklift_x = WIDTH // 2 - forklift_width // 2
 forklift_y = HEIGHT - forklift_height - 20
@@ -72,12 +73,27 @@ rocket_cooldown = 0
 rocket_cooldown_duration = 20  # 2 seconds at 60 FPS
 
 Hearts_image = pygame.image.load("pictures/heart.png")
-Hears = pygame.transform.scale(Hearts_image, (120, 120))
-hearts_delay = 120
+Hears = pygame.transform.scale(Hearts_image, (50, 50))
+hearts_delay = 300
 hearts_timer = 0
 
 # List to hold active hearts
 hearts = []
+
+# Load highscore from file
+highscore_file = "highscore.txt"
+if os.path.exists(highscore_file):
+    with open(highscore_file, "r") as f:
+        try:
+            highscore = int(f.read())
+        except:
+            highscore = 0
+else:
+    highscore = 0
+
+score = 0  # Current score
+
+font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
 
 while running:
     clock.tick(60)
@@ -175,17 +191,23 @@ while running:
     hearts = [heart for heart in hearts if heart[1] < HEIGHT]
 
     # Update and draw bullets
-    for bullet in bullets:
+    for bullet in bullets[:]:
         bullet[1] -= 10  
         screen.blit(bullet_image, (bullet[0], bullet[1]))
 
-        for car in police_cars:
+        for car in police_cars[:]:
             if (bullet[0] < car[0] + police_car_width and
                 bullet[0] + bullet_image.get_width() > car[0] and
                 bullet[1] < car[1] + police_car_height and
                 bullet[1] + bullet_image.get_height() > car[1]):
                 police_cars.remove(car) 
-                bullets.remove(bullet) 
+                bullets.remove(bullet)
+                score += 10  # Increase score when police car destroyed
+                if score > highscore:
+                    highscore = score  # Update highscore if needed
+                    # Save new highscore to file
+                    with open(highscore_file, "w") as f:
+                        f.write(str(highscore))
                 break
     
     bullets = [bullet for bullet in bullets if bullet[1] > 0]
@@ -193,6 +215,12 @@ while running:
     screen.blit(forklift_image, (forklift_x, forklift_y))
 
     draw_health_bar(screen, 20, 20, 200, 20, forklift_health, max_health)
+
+    # Draw the score and highscore at the top left
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    highscore_text = font.render(f"Highscore: {highscore}", True, YELLOW)
+    screen.blit(score_text, (20, 50))
+    screen.blit(highscore_text, (20, 100))
 
     pygame.display.flip()
 
