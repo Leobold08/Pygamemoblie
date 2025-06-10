@@ -81,7 +81,7 @@ hearts_timer = 0
 hearts = []
 
 # Load highscore from file
-highscore_file = "highscore.txt"
+highscore_file = "mobilgame/highscore.txt"
 if os.path.exists(highscore_file):
     with open(highscore_file, "r") as f:
         try:
@@ -93,7 +93,7 @@ else:
 
 score = 0  # Current score
 
-font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
+font = pygame.font.SysFont(None, 48)
 
 road_scroll_y = 0
 
@@ -214,6 +214,15 @@ def main_menu():
 main_menu()
 
 
+# Initialize round variables
+current_round = 1
+round_active = True
+police_cars_to_spawn = 99999  # Number of police cars to spawn per round
+police_cars_destroyed = 0
+police_cars_required = 15  # Number of police cars to destroy to complete the round
+round_time_limit = 180  # 3 minutes (in seconds)
+round_timer = round_time_limit * 60  # Convert to frames (assuming 60 FPS)
+
 while running:
     clock.tick(60)
 
@@ -229,41 +238,16 @@ while running:
     # Restrict forklift_y to the bottom half of the screen
     forklift_y = max(HEIGHT // 2, min(HEIGHT - forklift_height, mouse_y - forklift_height // 2))
 
-    for i in range(len(lines)):
-        lines[i] += line_speed
-        if lines[i] > HEIGHT:
-            lines[i] = -line_height
-
     # Scroll the road image
     road_scroll_y += line_speed
     if road_scroll_y >= HEIGHT:
         road_scroll_y = 0
 
-
     screen.blit(road_image, (0, road_scroll_y - HEIGHT))  
     screen.blit(road_image, (0, road_scroll_y)) 
 
-    if pygame.mouse.get_pressed()[0]:
-        forklift_speed = 10
-        line_speed = 10
-    else:
-        forklift_speed = 5
-        line_speed = 5
-
-    # Spawn bullets when right mouse button is clicked, respecting cooldown
-    if pygame.mouse.get_pressed()[2] and rocket_cooldown == 0:  # Right mouse button
-        bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
-        bullet_y = forklift_y
-        bullets.append([bullet_x, bullet_y]) 
-        rocket_cooldown = rocket_cooldown_duration 
-
-    # Update cooldown timer
-    if rocket_cooldown > 0:
-        rocket_cooldown -= 1
-
-    # Increase difficulty by reducing spawn delay over time
-    # Limit the maximum number of police cars
-    if len(police_cars) < 7:
+    # Spawn police cars for the current round
+    if len(police_cars) < police_cars_to_spawn and round_active:
         police_spawn_timer += 1
         if police_spawn_timer >= police_spawn_delay:
             police_spawn_timer = 0
@@ -274,11 +258,18 @@ while running:
         # Move the police car downward
         car[1] += line_speed
 
-        # Optional: Add slight horizontal movement for dynamic effect
-        car[0] += random.choice([-1, 1])  # Move left or right randomly
-
-        # Ensure police cars stay above the bottom half of the screen
+        # Restrict police cars to the upper half of the screen
         car[1] = min(car[1], HEIGHT // 2 - police_car_height)
+
+        # Add slight horizontal movement
+        car[0] += random.choice([-1, 1])  # Slight horizontal movement
+        car[0] = max(0, min(WIDTH - police_car_width, car[0]))  # Keep within bounds
+
+        # Police shooting bullets
+        if random.randint(0, 100) < 2:  # 2% chance to shoot per frame
+            police_bullet_x = car[0] + police_car_width // 2 - police_bullet_image.get_width() // 2
+            police_bullet_y = car[1] + police_car_height
+            police_bullets.append([police_bullet_x, police_bullet_y])
 
         # Draw the police car
         screen.blit(police_car_image, (car[0], car[1]))
@@ -296,98 +287,112 @@ while running:
                 pygame.quit()
                 sys.exit()
 
+    # Spawn bullets when right mouse button is clicked, respecting cooldown
+    if pygame.mouse.get_pressed()[2] and rocket_cooldown == 0:  # Right mouse button
+        bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
+        bullet_y = forklift_y
+        bullets.append([bullet_x, bullet_y])  # Add bullet to the list
+        rocket_cooldown = rocket_cooldown_duration  # Reset cooldown timer
 
-    # Remove police cars that go off-screen or are destroyed
-    police_cars = [car for car in police_cars if car[1] < HEIGHT // 2]
-
-
-    # Spawn hearts randomly (e.g., 0.5% chance per frame, and limit number of hearts)
-    if len(hearts) < 2 and random.randint(1, 200) == 1:
-        heart_x = random.randint(0, WIDTH - 50)
-        heart_y = -50  # Start above the screen
-        hearts.append([heart_x, heart_y])
-
-    for heart in hearts:
-        heart[1] += line_speed 
-        screen.blit(Hears, (heart[0], heart[1]))
-
-        # Check for collision with forklift
-        if (forklift_x < heart[0] + 120 and
-            forklift_x + forklift_width > heart[0] and
-            forklift_y < heart[1] + 120 and
-            forklift_y + forklift_height > heart[1]):
-            forklift_health = min(forklift_health + 10, max_health)  
-            hearts.remove(heart)
-
-    # Remove hearts that go off-screen
-    hearts = [heart for heart in hearts if heart[1] < HEIGHT]
+    # Update cooldown timer
+    if rocket_cooldown > 0:
+        rocket_cooldown -= 1
 
     # Update and draw bullets
     for bullet in bullets[:]:
-        bullet[1] -= 10  
+        bullet[1] -= 10  # Move the bullet upward
         screen.blit(bullet_image, (bullet[0], bullet[1]))
 
+        # Check for collision with police cars
         for car in police_cars[:]:
             if (bullet[0] < car[0] + police_car_width and
                 bullet[0] + bullet_image.get_width() > car[0] and
                 bullet[1] < car[1] + police_car_height and
                 bullet[1] + bullet_image.get_height() > car[1]):
                 police_cars.remove(car) 
-                bullets.remove(bullet)
-                score += 10 
-                if score > highscore:
-                    highscore = score
-                    with open(highscore_file, "w") as f:
-                        f.write(str(highscore))
-                # Show reward menu at 100 score
-                if score == 100:
-                    upgrade = reward_menu()
-                    if upgrade == "firerate":
-                        rocket_cooldown_duration = max(5, rocket_cooldown_duration - 5)
-                    elif upgrade == "maxhp":
-                        max_health += 20
-                        forklift_health = max_health
-                    elif upgrade == "speed":
-                        forklift_speed += 2
+                bullets.remove(bullet) 
+                police_cars_destroyed += 1 
+                score += 10  
                 break
-    
-    bullets = [bullet for bullet in bullets if bullet[1] > 0]
 
-    # Police cars shoot bullets
-    for car in police_cars:
-        # 1% chance per frame to shoot a bullet
-        if random.randint(1, 100) == 1:
-            bullet_x = car[0] + police_car_width // 2 - police_bullet_image.get_width() // 2
-            bullet_y = car[1] + police_car_height
-            police_bullets.append([bullet_x, bullet_y])
-
-    # Move police bullets and check collision with player
+    # Update and draw police bullets
     for bullet in police_bullets[:]:
-        bullet[1] += 10  # Bullet speed
+        bullet[1] += 10  # Move the bullet downward
         screen.blit(police_bullet_image, (bullet[0], bullet[1]))
 
-        # Collision with forklift
+        # Check for collision with the forklift
         if (forklift_x < bullet[0] + police_bullet_image.get_width() and
             forklift_x + forklift_width > bullet[0] and
             forklift_y < bullet[1] + police_bullet_image.get_height() and
             forklift_y + forklift_height > bullet[1]):
-            forklift_health = max(0, forklift_health - 10)
-            police_bullets.remove(bullet)
-            if forklift_health <= 0:
-                pygame.quit()
-                sys.exit()
-        # Remove if off screen
-        elif bullet[1] > HEIGHT:
+            forklift_health -= 5  # Reduce health on hit
             police_bullets.remove(bullet)
 
+    # Spawn hearts periodically
+    hearts_timer += 1
+    if hearts_timer >= 180:  # Spawn a heart every 3 seconds (at 60 FPS)
+        hearts_timer = 0
+        heart_x = random.randint(0, WIDTH - Hears.get_width())
+        hearts.append([heart_x, -Hears.get_height()])  # Spawn heart at the top
+
+    # Update and draw hearts
+    for heart in hearts[:]:
+        heart[1] += line_speed  # Move the heart downward
+        screen.blit(Hears, (heart[0], heart[1]))
+
+        # Check for collision with the forklift
+        if (forklift_x < heart[0] + Hears.get_width() and
+            forklift_x + forklift_width > heart[0] and
+            forklift_y < heart[1] + Hears.get_height() and
+            forklift_y + forklift_height > heart[1]):
+            forklift_health = min(forklift_health + 20, max_health)  # Increase health
+            hearts.remove(heart)
+
+    # Remove hearts that go off-screen
+    hearts = [heart for heart in hearts if heart[1] < HEIGHT]
+
+    # Remove bullets that go off-screen
+    bullets = [bullet for bullet in bullets if bullet[1] > 0]
+    police_bullets = [bullet for bullet in police_bullets if bullet[1] < HEIGHT]
+
+    # Decrease the round timer
+    if round_active:
+        round_timer -= 1
+
+    # Check if the round is complete
+    if (police_cars_destroyed >= police_cars_required or round_timer <= 0) and round_active:
+        round_active = False
+        police_cars_destroyed = 0
+        round_timer = round_time_limit * 60  # Reset timer for the next round
+        # Show the reward menu
+        upgrade = reward_menu()
+        if upgrade == "firerate":
+            rocket_cooldown_duration = max(5, rocket_cooldown_duration - 5)
+        elif upgrade == "maxhp":
+            max_health += 20
+            forklift_health = max_health
+        elif upgrade == "speed":
+            forklift_speed += 2
+
+        # Start the next round
+        current_round += 1
+        police_cars_to_spawn += 2  # Increase the number of police cars for the next round
+        police_cars_required += 20
+        round_active = True
+
+    # Draw the forklift
     screen.blit(forklift_image, (forklift_x, forklift_y))
 
     draw_health_bar(screen, 20, 20, 200, 20, forklift_health, max_health)
 
-    # Draw the score and highscore at the top left
+    # Draw the score, highscore, round number, and timer
     score_text = font.render(f"Score: {score}", True, WHITE)
     highscore_text = font.render(f"Highscore: {highscore}", True, YELLOW)
+    round_text = font.render(f"Round: {current_round}", True, WHITE)
+    timer_text = font.render(f"Time Left: {round_timer // 60}s", True, RED)
     screen.blit(score_text, (20, 50))
     screen.blit(highscore_text, (20, 100))
+    screen.blit(round_text, (20, 150))
+    screen.blit(timer_text, (20, 200))
 
     pygame.display.flip()
