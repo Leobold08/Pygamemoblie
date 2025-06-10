@@ -103,6 +103,63 @@ police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 
 police_bullets = []  # List to hold police bullets
 
+def reward_menu():
+    # Load images
+    rpgammo_img = pygame.image.load("pictures/RPGAMMO.png")
+    rpgammo_img = pygame.transform.scale(rpgammo_img, (100, 100))
+    heart_img = pygame.image.load("pictures/heart.png")
+    heart_img = pygame.transform.scale(heart_img, (100, 100))
+    forklift_img = pygame.image.load("pictures/forklift.png")
+    forklift_img = pygame.transform.scale(forklift_img, (100, 100))
+
+    # List of upgrades and their actions
+    upgrades = [
+        ("firerate", rpgammo_img, "Faster Fire Rate"),
+        ("maxhp", heart_img, "Increase Max HP"),
+        ("speed", forklift_img, "Faster Movement")
+    ]
+    random.shuffle(upgrades)
+
+    # Position upgrades horizontally centered
+    spacing = 100
+    total_width = 3 * 100 + 2 * spacing
+    start_x = WIDTH // 2 - total_width // 2
+    y = HEIGHT // 2 - 50
+
+    menu_running = True
+    font_small = pygame.font.SysFont(None, 32)  # Font for labels
+
+    while menu_running:
+        screen.fill(GRAY)
+        font_big = pygame.font.SysFont(None, 60)
+        text = font_big.render("Choose Your Upgrade!", True, WHITE)
+        screen.blit(text, (WIDTH // 2 - text.get_width() // 2, 100))
+
+        rects = []
+        for i, (name, img, label) in enumerate(upgrades):
+            x = start_x + i * (100 + spacing)
+            rect = pygame.Rect(x, y, 100, 100)
+            rects.append((rect, name))
+            screen.blit(img, (x, y))
+            # Draw label under the image
+            label_surface = font_small.render(label, True, WHITE)
+            label_x = x + 50 - label_surface.get_width() // 2
+            label_y = y + 110  # 10px below the image
+            screen.blit(label_surface, (label_x, label_y))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                for rect, name in rects:
+                    if rect.collidepoint(mx, my):
+                        menu_running = False
+                        return name  # Return the chosen upgrade
+
 def main_menu():
     menu_running = True
 
@@ -282,6 +339,16 @@ while running:
                     highscore = score
                     with open(highscore_file, "w") as f:
                         f.write(str(highscore))
+                # Show reward menu at 100 score
+                if score == 100:
+                    upgrade = reward_menu()
+                    if upgrade == "firerate":
+                        rocket_cooldown_duration = max(5, rocket_cooldown_duration - 5)
+                    elif upgrade == "maxhp":
+                        max_health += 20
+                        forklift_health = max_health
+                    elif upgrade == "speed":
+                        forklift_speed += 2
                 break
     
     bullets = [bullet for bullet in bullets if bullet[1] > 0]
@@ -324,6 +391,3 @@ while running:
     screen.blit(highscore_text, (20, 100))
 
     pygame.display.flip()
-
-pygame.quit()
-sys.exit()
