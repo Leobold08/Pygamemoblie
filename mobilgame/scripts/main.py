@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 import os
+from upgrade import reward_menu
 
 pygame.init()
 
@@ -92,6 +93,7 @@ else:
     highscore = 0
 
 score = 0  # Current score
+upgrade_given = False  # <-- Add this line
 
 font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
 
@@ -322,6 +324,12 @@ while running:
     highscore_text = font.render(f"Highscore: {highscore}", True, YELLOW)
     screen.blit(score_text, (20, 50))
     screen.blit(highscore_text, (20, 100))
+
+    # --- UPGRADE MECHANIC ---
+    if score >= 100 and not upgrade_given:
+        chosen_upgrade = reward_menu(screen, WIDTH, HEIGHT)
+        print("Upgrade chosen:", chosen_upgrade)  # You can apply the upgrade here
+        upgrade_given = True
 
     pygame.display.flip()
 
