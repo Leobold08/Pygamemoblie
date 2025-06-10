@@ -111,12 +111,15 @@ def reward_menu():
     heart_img = pygame.transform.scale(heart_img, (100, 100))
     forklift_img = pygame.image.load("pictures/forklift.png")
     forklift_img = pygame.transform.scale(forklift_img, (100, 100))
+    turret_img = pygame.image.load("pictures/bullet.png")
+    turret_img = pygame.transform.scale(turret_img, (100, 100))
 
     # List of upgrades and their actions
     upgrades = [
         ("firerate", rpgammo_img, "Faster Fire Rate"),
         ("maxhp", heart_img, "Increase Max HP"),
-        ("speed", forklift_img, "Faster Movement")
+        ("speed", forklift_img, "Faster Movement"),
+        ("autoturret", turret_img, "Auto Turret"),
     ]
     random.shuffle(upgrades)
 
@@ -223,6 +226,12 @@ police_cars_required = 15  # Number of police cars to destroy to complete the ro
 round_time_limit = 180  # 3 minutes (in seconds)
 round_timer = round_time_limit * 60  # Convert to frames (assuming 60 FPS)
 
+# Auto turret variables
+auto_turret_enabled = False
+auto_turret_cooldown = 0
+auto_turret_cooldown_duration = 30  # Fast fire rate
+auto_turret_bullets = []
+
 while running:
     clock.tick(60)
 
@@ -252,7 +261,7 @@ while running:
         if police_spawn_timer >= police_spawn_delay:
             police_spawn_timer = 0
             police_x = random.randint(0, WIDTH - police_car_width)
-            police_cars.append([police_x, -police_car_height])  # Spawn new police car
+            police_cars.append([police_x, -police_car_height, 20])  # 20 HP
 
     for car in police_cars:
         # Move the police car downward
@@ -305,14 +314,17 @@ while running:
 
         # Check for collision with police cars
         for car in police_cars[:]:
-            if (bullet[0] < car[0] + police_car_width and
-                bullet[0] + bullet_image.get_width() > car[0] and
-                bullet[1] < car[1] + police_car_height and
-                bullet[1] + bullet_image.get_height() > car[1]):
-                police_cars.remove(car) 
-                bullets.remove(bullet) 
-                police_cars_destroyed += 1 
-                score += 10  
+            car_x, car_y, car_hp = car
+            if (bullet[0] < car_x + police_car_width and
+                bullet[0] + bullet_image.get_width() > car_x and
+                bullet[1] < car_y + police_car_height and
+                bullet[1] + bullet_image.get_height() > car_y):
+                car[2] -= 10  # Rocket does 10 damage
+                bullets.remove(bullet)
+                if car[2] <= 0:
+                    police_cars.remove(car)
+                    police_cars_destroyed += 1
+                    score += 10
                 break
 
     # Update and draw police bullets
@@ -355,6 +367,35 @@ while running:
     bullets = [bullet for bullet in bullets if bullet[1] > 0]
     police_bullets = [bullet for bullet in police_bullets if bullet[1] < HEIGHT]
 
+    # --- AUTO TURRET LOGIC ---
+    if auto_turret_enabled:
+        auto_turret_cooldown -= 1
+        if auto_turret_cooldown <= 0:
+            turret_bullet_x = forklift_x + forklift_width // 2 - police_bullet_image.get_width() // 2
+            turret_bullet_y = forklift_y
+            auto_turret_bullets.append([turret_bullet_x, turret_bullet_y])
+            auto_turret_cooldown = auto_turret_cooldown_duration
+
+    for bullet in auto_turret_bullets[:]:
+        bullet[1] -= 15  # Fast upward
+        screen.blit(police_bullet_image, (bullet[0], bullet[1]))
+        for car in police_cars[:]:
+            car_x, car_y, car_hp = car
+            if (bullet[0] < car_x + police_car_width and
+                bullet[0] + police_bullet_image.get_width() > car_x and
+                bullet[1] < car_y + police_car_height and
+                bullet[1] + police_bullet_image.get_height() > car_y):
+                car[2] -= 5  # Auto turret does 5 damage
+                auto_turret_bullets.remove(bullet)
+                if car[2] <= 0:
+                    police_cars.remove(car)
+                    police_cars_destroyed += 1
+                    score += 10
+                break
+        else:
+            if bullet[1] < 0:
+                auto_turret_bullets.remove(bullet)
+
     # Decrease the round timer
     if round_active:
         round_timer -= 1
@@ -373,6 +414,8 @@ while running:
             forklift_health = max_health
         elif upgrade == "speed":
             forklift_speed += 2
+        elif upgrade == "autoturret":
+            auto_turret_enabled = True
 
         # Start the next round
         current_round += 1
