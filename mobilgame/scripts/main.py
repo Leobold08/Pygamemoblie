@@ -110,6 +110,9 @@ police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 
 police_bullets = []  # List to hold police bullets
 
+# Add this variable near the other turret variables, before the game loop:
+auto_turret_damage = 10  # Initial auto turret damage
+
 def main_menu():
     menu_running = True
 
@@ -231,7 +234,7 @@ while running:
         if police_spawn_timer >= police_spawn_delay:
             police_spawn_timer = 0
             police_x = random.randint(0, WIDTH - police_car_width)
-            police_cars.append([police_x, -police_car_height])  # Spawn new police car
+            police_cars.append([police_x, -police_car_height, 100])  # 100 HP
 
     for car in police_cars:
         # Move the police car downward
@@ -247,6 +250,7 @@ while running:
         screen.blit(police_car_image, (car[0], car[1]))
 
 
+        # Collision with forklift
         if (forklift_x < car[0] + police_car_width and
             forklift_x + forklift_width > car[0] and
             forklift_y < car[1] + police_car_height and
@@ -261,7 +265,7 @@ while running:
 
 
     # Remove police cars that go off-screen or are destroyed
-    police_cars = [car for car in police_cars if car[1] < HEIGHT // 2]
+    police_cars = [car for car in police_cars if car[1] < HEIGHT // 2 and car[2] > 0]
 
 
     # Spawn hearts randomly (e.g., 0.5% chance per frame, and limit number of hearts)
@@ -285,7 +289,7 @@ while running:
     # Remove hearts that go off-screen
     hearts = [heart for heart in hearts if heart[1] < HEIGHT]
 
-    # Update and draw bullets
+    # Update and draw bullets (ROCKETS)
     for bullet in bullets[:]:
         bullet[1] -= 10  
         screen.blit(bullet_image, (bullet[0], bullet[1]))
@@ -295,16 +299,18 @@ while running:
                 bullet[0] + bullet_image.get_width() > car[0] and
                 bullet[1] < car[1] + police_car_height and
                 bullet[1] + bullet_image.get_height() > car[1]):
-                police_cars.remove(car) 
+                car[2] -= 80  # Rocket does 80 damage now
+                if car[2] <= 0:
+                    police_cars.remove(car)
+                    police_cars_destroyed += 1
+                    score += 10
+                    if score > highscore:
+                        highscore = score
+                        with open(highscore_file, "w") as f:
+                            f.write(str(highscore))
                 bullets.remove(bullet)
-                police_cars_destroyed += 1
-                score += 10 
-                if score > highscore:
-                    highscore = score
-                    with open(highscore_file, "w") as f:
-                        f.write(str(highscore))
                 break
-    
+
     bullets = [bullet for bullet in bullets if bullet[1] > 0]
 
     # Police cars shoot bullets
@@ -364,6 +370,7 @@ while running:
             forklift_speed += 2
         elif upgrade == "autoturret":
             auto_turret_enabled = True
+            auto_turret_damage += 5  # Increase auto turret damage by 5 each time
 
         # Start the next round
         current_round += 1
@@ -401,9 +408,9 @@ while running:
                 bullet[0] + police_bullet_image.get_width() > car[0] and
                 bullet[1] < car[1] + police_car_height and
                 bullet[1] + police_bullet_image.get_height() > car[1]):
-                car[1] -= 5  # Auto turret does 5 damage
+                car[2] -= auto_turret_damage  # Use variable damage
                 auto_turret_bullets.remove(bullet)
-                if car[1] <= 0:
+                if car[2] <= 0:
                     police_cars.remove(car)
                     police_cars_destroyed += 1
                     score += 10
