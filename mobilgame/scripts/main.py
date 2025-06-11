@@ -53,9 +53,25 @@ police_car_image = pygame.image.load("pictures/police_car.png")
 police_car_width, police_car_height = 120, 120
 police_car_image = pygame.transform.scale(police_car_image, (police_car_width, police_car_height))
 
+red_car_image = pygame.image.load("pictures/red_car.png")
+red_car_image = pygame.transform.scale(red_car_image, (120, 120))
+blue_car_image = pygame.image.load("pictures/blue_car.png")
+blue_car_image = pygame.transform.scale(blue_car_image, (120, 120))
+green_car_image = pygame.image.load("pictures/green_car.png")
+green_car_image = pygame.transform.scale(green_car_image, (120, 120))
+
 police_cars = []  # List to hold police car positions
 police_spawn_timer = 0
 police_spawn_delay = 90  
+
+normal_cars = []  # Each car: [x, y, color]
+normal_car_types = [
+    ("red", red_car_image),
+    ("blue", blue_car_image),
+    ("green", green_car_image)
+]
+normal_car_spawn_timer = 0
+normal_car_spawn_delay = 60  # Adjust for spawn rate
 
 # Load the road image
 road_image = pygame.image.load("pictures/ROAD.png")
@@ -450,10 +466,11 @@ while running:
                 auto_turret_bullets.remove(bullet)
 
     # --- UPGRADE MECHANIC ---
-    if score >= 100 and not upgrade_given:
-        chosen_upgrade = reward_menu(screen, WIDTH, HEIGHT)
-        print("Upgrade chosen:", chosen_upgrade)  # You can apply the upgrade here
-        upgrade_given = True
+    # REMOVE or COMMENT OUT this block:
+    # if score >= 100 and not upgrade_given:
+    #     chosen_upgrade = reward_menu(screen, WIDTH, HEIGHT)
+    #     print("Upgrade chosen:", chosen_upgrade)
+    #     upgrade_given = True
 
 
     if bosses:
@@ -547,6 +564,53 @@ while running:
         health_ratio = boss_health / 500  # Assuming 500 is the max health
         pygame.draw.rect(screen, RED, (boss_x, boss_y - 20, health_bar_width, health_bar_height))  # Background
         pygame.draw.rect(screen, GREEN, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height))  # Health
+
+    # --- Spawn normal cars ---
+    normal_car_spawn_timer += 1
+    if normal_car_spawn_timer >= normal_car_spawn_delay:
+        normal_car_spawn_timer = 0
+        car_type, car_img = random.choice(normal_car_types)
+        car_x = random.randint(0, WIDTH - 120)
+        normal_cars.append([car_x, -120, car_type])
+
+    # --- Move, draw, and handle collisions for normal cars ---
+    for car in normal_cars[:]:
+        car[1] += line_speed + 5  # Move faster than police cars
+        # Draw the correct image, flipped vertically
+        if car[2] == "red":
+            flipped_img = pygame.transform.flip(red_car_image, False, True)
+            screen.blit(flipped_img, (car[0], car[1]))
+        elif car[2] == "blue":
+            flipped_img = pygame.transform.flip(blue_car_image, False, True)
+            screen.blit(flipped_img, (car[0], car[1]))
+        elif car[2] == "green":
+            flipped_img = pygame.transform.flip(green_car_image, False, True)
+            screen.blit(flipped_img, (car[0], car[1]))
+
+        # Remove if off screen
+        if car[1] > HEIGHT:
+            normal_cars.remove(car)
+            continue
+
+        # Collision with forklift
+        if (forklift_x < car[0] + 120 and
+            forklift_x + forklift_width > car[0] and
+            forklift_y < car[1] + 120 and
+            forklift_y + forklift_height > car[1]):
+            normal_cars.remove(car)
+            score += 15  # Award points for hitting with forklift
+            continue
+
+        # Collision with bullets
+        for bullet in bullets[:]:
+            if (bullet[0] < car[0] + 120 and
+                bullet[0] + bullet_image.get_width() > car[0] and
+                bullet[1] < car[1] + 120 and
+                bullet[1] + bullet_image.get_height() > car[1]):
+                normal_cars.remove(car)
+                bullets.remove(bullet)
+                score += 15  # Award points for shooting
+                break
 
     pygame.display.flip()
 
