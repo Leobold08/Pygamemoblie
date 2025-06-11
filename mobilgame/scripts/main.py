@@ -355,7 +355,7 @@ while running:
 
         # Apply the selected upgrade
         if upgrade == "firerate":
-            rocket_cooldown_duration = max(5, rocket_cooldown_duration - 5)
+            rocket_cooldown_duration -= 1
         elif upgrade == "maxhp":
             max_health += 20
             forklift_health = max_health
@@ -401,9 +401,9 @@ while running:
                 bullet[0] + police_bullet_image.get_width() > car[0] and
                 bullet[1] < car[1] + police_car_height and
                 bullet[1] + police_bullet_image.get_height() > car[1]):
-                car[2] -= 5  # Auto turret does 5 damage
+                car[1] -= 5  # Auto turret does 5 damage
                 auto_turret_bullets.remove(bullet)
-                if car[2] <= 0:
+                if car[1] <= 0:
                     police_cars.remove(car)
                     police_cars_destroyed += 1
                     score += 10
