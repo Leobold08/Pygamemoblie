@@ -20,6 +20,7 @@ def reward_menu(screen, WIDTH, HEIGHT):
         ("autoturret", turret_img, "Auto Turret"),
     ]
     random.shuffle(upgrades)
+    upgrades = upgrades[:3]  # Only pick 3 random upgrades
 
     spacing = 100
     total_width = 3 * 100 + 2 * spacing
