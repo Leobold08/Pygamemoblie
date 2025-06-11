@@ -149,6 +149,15 @@ auto_turret_damage = 10  # Initial auto turret damage
 # Add this variable near the other boss-related variables
 boss_direction = 1  # 1 for right, -1 for left
 
+# Load explosion frames
+explosion_frames = []
+for i in range(5):  # Assuming the GIF has 5 frames
+    frame = pygame.image.load(f"kaput/frame_{i}.png")
+    frame = pygame.transform.scale(frame, (120, 120))  # Scale to match the car size
+    explosion_frames.append(frame)
+
+explosions = []  # List to hold active explosions
+
 def main_menu():
     menu_running = True
 
@@ -340,15 +349,13 @@ while running:
                 bullet[0] + bullet_image.get_width() > car[0] and
                 bullet[1] < car[1] + police_car_height and
                 bullet[1] + bullet_image.get_height() > car[1]):
-                car[2] -= 80  # Rocket does 80 damage now
+                car[2] -= 80  # Reduce car health
                 if car[2] <= 0:
                     police_cars.remove(car)
                     police_cars_destroyed += 1
                     score += 10
-                    if score > highscore:
-                        highscore = score
-                        with open(highscore_file, "w") as f:
-                            f.write(str(highscore))
+                    # Add explosion at the car's position
+                    explosions.append({"x": car[0], "y": car[1], "frame": 0, "timer": 0})
                 bullets.remove(bullet)
                 break
 
@@ -611,6 +618,20 @@ while running:
                 bullets.remove(bullet)
                 score += 15  # Award points for shooting
                 break
+
+    # Manage and draw explosions
+    for explosion in explosions[:]:
+        explosion["timer"] += 1
+        if explosion["timer"] >= 5:  # Adjust frame rate (higher = slower)
+            explosion["timer"] = 0
+            explosion["frame"] += 1
+            if explosion["frame"] >= len(explosion_frames):  # If last frame is reached
+                explosions.remove(explosion)  # Remove the explosion
+                continue
+
+        # Draw the current frame of the explosion
+        frame = explosion_frames[explosion["frame"]]
+        screen.blit(frame, (explosion["x"], explosion["y"]))
 
     pygame.display.flip()
 
