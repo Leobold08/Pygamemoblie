@@ -2,7 +2,9 @@ import pygame
 import sys
 import random
 import os
+import math
 from upgrade import reward_menu
+from boss import spawn_boss, draw_bosses, boss_shoot, update_boss_bullets
 
 pygame.init()
 
@@ -16,6 +18,7 @@ YELLOW = (255, 204, 0)
 BLACK = (0, 0, 0)
 CYEAN = (0, 255, 255)
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 
 forklift_width = 90
 forklift_height = 150
@@ -58,6 +61,20 @@ police_spawn_delay = 90
 road_image = pygame.image.load("pictures/ROAD.png")
 road_image = pygame.transform.scale(road_image, (WIDTH, HEIGHT))  # Scale to fullscreen dimensions
 
+try:
+    boss_image = pygame.image.load("pictures/TRACTOR.png")
+    boss_image = pygame.transform.scale(boss_image, (200, 200))  # Scale the image
+except pygame.error as e:
+    print(f"Error loading boss image: {e}")
+    pygame.quit()
+    sys.exit()
+
+bosses = []
+boss_bullets = []
+boss_shoot_timer = 0 
+boss_health = 750
+boss_damage = 25
+
 clock = pygame.time.Clock()
 running = True
 
@@ -98,7 +115,7 @@ else:
     highscore = 0
 
 score = 0  # Current score
-upgrade_given = False  # <-- Add this line
+upgrade_given = False  
 
 font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
 
@@ -112,6 +129,9 @@ police_bullets = []  # List to hold police bullets
 
 # Add this variable near the other turret variables, before the game loop:
 auto_turret_damage = 10  # Initial auto turret damage
+
+# Add this variable near the other boss-related variables
+boss_direction = 1  # 1 for right, -1 for left
 
 def main_menu():
     menu_running = True
@@ -170,15 +190,16 @@ current_round = 1
 round_active = True
 police_cars_to_spawn = 20  # Number of police cars to spawn per round
 police_cars_destroyed = 0
-police_cars_required = 5
+police_cars_required = 10
 round_time_limit = 180  # 3 minutes (in seconds)
 round_timer = round_time_limit * 60  # Convert to frames (assuming 60 FPS)
 
 auto_turret_enabled = False
 auto_turret_cooldown = 0
-auto_turret_cooldown_duration = 30  # Fast fire rate
+auto_turret_cooldown_duration = 30  # Fast fire rate     
 auto_turret_bullets = []
 
+#boss_direction = random.choice([-2, 2])
 
 while running:
     clock.tick(60)
@@ -229,19 +250,23 @@ while running:
 
     # Increase difficulty by reducing spawn delay over time
     # Limit the maximum number of police cars
-    if len(police_cars) < 7:
+    if not bosses and len(police_cars) < 7:  # Only spawn police cars if no boss is active
         police_spawn_timer += 1
         if police_spawn_timer >= police_spawn_delay:
             police_spawn_timer = 0
             police_x = random.randint(0, WIDTH - police_car_width)
-            police_cars.append([police_x, -police_car_height, 100])  # 100 HP
+            # Spawn police cars with a direction
+            police_cars.append([police_x, -police_car_height, 100, random.choice([-1, 1])]) 
 
     for car in police_cars:
-        # Move the police car downward
+
         car[1] += line_speed
 
-        # Optional: Add slight horizontal movement for dynamic effect
-        car[0] += random.choice([-1, 1])  # Move left or right randomly
+        car[0] += car[3] * 2  # Adjust speed as needed
+
+        # Reverse direction if the car hits the screen edges
+        if car[0] <= 0 or car[0] + police_car_width >= WIDTH:
+            car[3] *= -1  # Reverse direction
 
         # Ensure police cars stay above the bottom half of the screen
         car[1] = min(car[1], HEIGHT // 2 - police_car_height)
@@ -357,7 +382,6 @@ while running:
 
         # Show the reward menu and get the selected upgrade
         upgrade = reward_menu(screen, WIDTH, HEIGHT)  # Pass the required arguments
- # Debugging message
 
         # Apply the selected upgrade
         if upgrade == "firerate":
@@ -374,10 +398,16 @@ while running:
 
         # Start the next round
         current_round += 1
-        police_cars_to_spawn += 20  # Increase the number of police cars for the next round
-        police_cars_required += 20
+        police_cars_to_spawn += 2  # Increase the number of police cars for the next round
+        police_cars_required += 1
         round_active = True
 
+        # --- Boss Spawning Logic ---
+        if current_round == 4 and not bosses:  # Spawn the boss only once
+            print(f"Spawning boss with health: {boss_health}, damage: {boss_damage}, image: {boss_image}")
+            print(f"Calling spawn_boss with: bosses={bosses}, WIDTH={WIDTH}, HEIGHT={HEIGHT}, boss_width=200, boss_height=200, boss_health={boss_health}, boss_damage={boss_damage}, boss_image={boss_image}")
+            spawn_boss(bosses, WIDTH, HEIGHT, 200, 200, boss_health, boss_damage, boss_image)
+            print(f"Boss spawned at: {bosses}")  # Debugging line
 
     screen.blit(forklift_image, (forklift_x, forklift_y))
 
@@ -424,6 +454,99 @@ while running:
         chosen_upgrade = reward_menu(screen, WIDTH, HEIGHT)
         print("Upgrade chosen:", chosen_upgrade)  # You can apply the upgrade here
         upgrade_given = True
+
+
+    if bosses:
+        for boss in bosses[:]:
+            boss[0] += boss_direction * 3  # Move left or right
+            if boss[0] <= 0 or boss[0] + 200 >= WIDTH:  # Reverse direction at edges
+                boss_direction *= -1
+
+            # Keep the boss in the top half of the screen
+            boss[1] = min(boss[1], HEIGHT // 2 - 200)
+
+        draw_bosses(bosses, screen)  # Draw the boss
+
+        # Boss shooting logic
+        boss_shoot_timer += 1
+        if boss_shoot_timer >= 120: 
+            boss_shoot_timer = 0
+            for boss in bosses:
+                boss_shoot(boss, boss_bullets, bullet_speed=5)
+
+        # Update boss bullets
+        update_boss_bullets(boss_bullets, screen, police_bullet_image)
+
+        # Check for collisions between boss bullets and the forklift
+        for bullet in boss_bullets[:]:
+            if (forklift_x < bullet[0] + police_bullet_image.get_width() and
+                forklift_x + forklift_width > bullet[0] and
+                forklift_y < bullet[1] + police_bullet_image.get_height() and
+                forklift_y + forklift_height > bullet[1]):
+                forklift_health -= 25  # Boss bullet damage
+                boss_bullets.remove(bullet)
+                if forklift_health <= 0:
+                    pygame.quit()
+                    sys.exit()
+
+
+        # Check for collision with the forklift
+        for boss in bosses[:]:
+            boss_x, boss_y, boss_health, _, _ = boss
+            if (forklift_x < boss_x + 200 and
+                forklift_x + forklift_width > boss_x and
+                forklift_y < boss_y + 200 and
+                forklift_y + forklift_height > boss_y):
+                if not invincible:
+                    forklift_health -= boss_damage
+                    invincible = True
+                if forklift_health <= 0:
+                    pygame.quit()
+                    sys.exit()
+
+
+            if boss_health <= 0:
+                bosses.remove(boss)
+                score += 100  
+
+    # Check for collisions between bullets and the boss
+    for bullet in bullets[:]:
+        for boss in bosses[:]:
+            boss_x, boss_y, boss_health, _, boss_image = boss
+            if (bullet[0] < boss_x + boss_image.get_width() and
+                bullet[0] + bullet_image.get_width() > boss_x and
+                bullet[1] < boss_y + boss_image.get_height() and
+                bullet[1] + bullet_image.get_height() > boss_y):
+                boss[2] -= 20  # Reduce boss health by 80
+                bullets.remove(bullet)
+                if boss[2] <= 0:  # Remove boss if health is 0
+                    bosses.remove(boss)
+                    score += 500  # Reward for defeating the boss
+                break
+
+    # Check for collisions between auto turret bullets and the boss
+    for bullet in auto_turret_bullets[:]:
+        for boss in bosses[:]:
+            boss_x, boss_y, boss_health, _, boss_image = boss
+            if (bullet[0] < boss_x + boss_image.get_width() and
+                bullet[0] + police_bullet_image.get_width() > boss_x and
+                bullet[1] < boss_y + boss_image.get_height() and
+                bullet[1] + police_bullet_image.get_height() > boss_y):
+                boss[2] -= auto_turret_damage  # Reduce boss health by turret damage
+                auto_turret_bullets.remove(bullet)
+                if boss[2] <= 0:  # Remove boss if health is 0
+                    bosses.remove(boss)
+                    score += 500  # Reward for defeating the boss
+                break
+
+    # Draw a health bar above the boss
+    for boss in bosses:
+        boss_x, boss_y, boss_health, _, boss_image = boss
+        health_bar_width = boss_image.get_width()
+        health_bar_height = 10
+        health_ratio = boss_health / 500  # Assuming 500 is the max health
+        pygame.draw.rect(screen, RED, (boss_x, boss_y - 20, health_bar_width, health_bar_height))  # Background
+        pygame.draw.rect(screen, GREEN, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height))  # Health
 
     pygame.display.flip()
 

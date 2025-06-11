@@ -2,26 +2,34 @@ import pygame
 import random
 import math
 
-def spawn_boss(bosses, WIDTH, boss_width, boss_height, boss_heath, boss_damage):
-    boss_x = random.randint(0, WIDTH - boss_width)
-    bosses.append([boss_x, -boss_height, boss_heath, boss_damage])
+def spawn_boss(bosses, WIDTH, HEIGHT, boss_width, boss_height, boss_health, boss_damage, boss_image):
+    if WIDTH < boss_width or HEIGHT < boss_height:
+        print("Error: Boss dimensions are larger than the screen!")
+        return
+
+    boss_x = random.randint(0, WIDTH - boss_width)  # Random x position
+    boss_y = random.randint(0, HEIGHT // 4)  # Spawn in the top quarter of the screen
+    bosses.append([boss_x, boss_y, boss_health, boss_damage, boss_image])
+    print(f"Boss spawned at position: ({boss_x}, {boss_y}) with health: {boss_health}")
+
+def draw_bosses(bosses, screen):
+    for boss in bosses:
+        boss_x, boss_y, _, _, boss_image = boss  # Unpack the boss list correctly
+        screen.blit(boss_image, (boss_x, boss_y))  # Draw the boss image at its position
 
 def boss_shoot(boss, boss_bullets, bullet_speed):
-    """
-    Makes the boss shoot 3 bullets: one straight, one at 45° left, and one at 45° right.
-    """
-    boss_x, boss_y, _, _ = boss  # Extract boss position
-    bullet_width = 10  # Example bullet width, adjust as needed
-    bullet_height = 20  # Example bullet height, adjust as needed
+    boss_x, boss_y, _, _, _ = boss  # Extract boss position
+    bullet_width = 20
+    bullet_height = 20
 
     # Straight bullet
-    boss_bullets.append([boss_x + bullet_width // 2, boss_y + bullet_height, 0, bullet_speed])
+    boss_bullets.append([boss_x + 100 - bullet_width // 2, boss_y + 200, 0, bullet_speed])
 
     # Left angled bullet (-45 degrees)
     angle_left = math.radians(-45)
     boss_bullets.append([
-        boss_x + bullet_width // 2,
-        boss_y + bullet_height,
+        boss_x + 100 - bullet_width // 2,
+        boss_y + 200,
         bullet_speed * math.cos(angle_left),
         bullet_speed * math.sin(angle_left)
     ])
@@ -29,8 +37,8 @@ def boss_shoot(boss, boss_bullets, bullet_speed):
     # Right angled bullet (+45 degrees)
     angle_right = math.radians(45)
     boss_bullets.append([
-        boss_x + bullet_width // 2,
-        boss_y + bullet_height,
+        boss_x + 100 - bullet_width // 2,
+        boss_y + 200,
         bullet_speed * math.cos(angle_right),
         bullet_speed * math.sin(angle_right)
     ])
@@ -41,7 +49,7 @@ def update_boss_bullets(boss_bullets, screen, bullet_image):
         bullet[0] += bullet[2]  
         bullet[1] += bullet[3]  
 
-        # Remove bullets that go off-screen
+
         if bullet[1] > screen.get_height() or bullet[0] < 0 or bullet[0] > screen.get_width():
             boss_bullets.remove(bullet)
         else:
@@ -61,5 +69,6 @@ if boss_shoot_timer >= 120:  # Shoot every 2 seconds (at 60 FPS)
     boss_shoot_timer = 0
     boss_shoot(boss, boss_bullets, bullet_speed=5)
 
-update_boss_bullets(boss_bullets, screen, bullet_image)
+# Update and draw boss bullets
+
 
