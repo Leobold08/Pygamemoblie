@@ -479,7 +479,8 @@ while running:
                 if car[2] <= 0:
                     police_cars.remove(car)
                     police_cars_destroyed += 1
-                    score += 10
+                    score += 10                    
+                    explosions.append({"x": car[0], "y": car[1], "frame": 0, "timer": 0})
                 break
         else:
             if bullet[1] < 0:  # Remove bullets that go off-screen
@@ -705,6 +706,7 @@ while running:
                     police_cars.remove(car)
                     police_cars_destroyed += 1
                     score += 10
+                    
                 break
         else:
             if bullet[1] < 0 or bullet[0] < 0 or bullet[0] > WIDTH:
@@ -714,4 +716,3 @@ while running:
 
 pygame.quit()
 sys.exit()
-

@@ -70,5 +70,3 @@ if boss_shoot_timer >= 120:  # Shoot every 2 seconds (at 60 FPS)
     boss_shoot(boss, boss_bullets, bullet_speed=5)
 
 # Update and draw boss bullets
-
-
