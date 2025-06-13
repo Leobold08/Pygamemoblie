@@ -2,7 +2,7 @@ import pygame
 import sys
 import random
 
-def reward_menu(screen, WIDTH, HEIGHT):
+def reward_menu(screen, WIDTH, HEIGHT, num_upgrades=3):  # Default to 3 upgrades
     # Load images
     rpgammo_img = pygame.image.load("pictures/RPGAMMO.png")
     rpgammo_img = pygame.transform.scale(rpgammo_img, (100, 100))
@@ -13,17 +13,23 @@ def reward_menu(screen, WIDTH, HEIGHT):
     turret_img = pygame.image.load("pictures/bullet.png")
     turret_img = pygame.transform.scale(turret_img, (100, 100))
 
+    # Define available upgrades
     upgrades = [
         ("firerate", rpgammo_img, "Faster Fire Rate"),
         ("maxhp", heart_img, "Increase Max HP"),
         ("speed", forklift_img, "Faster Movement"),
         ("autoturret", turret_img, "Auto Turret"),
     ]
+
+    # If only 1 upgrade is requested (e.g., after boss defeat), show "3 Bullets"
+    if num_upgrades == 1:
+        upgrades = [("three_bullets", turret_img, "3 Bullets Upgrade")]
+
     random.shuffle(upgrades)
-    upgrades = upgrades[:3]  # Only pick 3 random upgrades
+    upgrades = upgrades[:num_upgrades]  # Pick the specified number of upgrades
 
     spacing = 100
-    total_width = 3 * 100 + 2 * spacing
+    total_width = num_upgrades * 100 + (num_upgrades - 1) * spacing
     start_x = WIDTH // 2 - total_width // 2
     y = HEIGHT // 2 - 50
 
