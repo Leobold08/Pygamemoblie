@@ -94,7 +94,7 @@ bosses = []
 boss_bullets = []
 boss_shoot_timer = 0 
 boss_health = 750
-boss_damage = 25
+boss_damage = -15                     
 
 clock = pygame.time.Clock()
 running = True
@@ -434,7 +434,7 @@ while running:
         round_active = True
 
         # --- Boss Spawning Logic ---
-        if current_round == 4 and not bosses:  # Spawn the boss only once
+        if current_round % 4 == 0 and not bosses:  # Spawn the boss every 4th round
             print(f"Spawning boss with health: {boss_health}, damage: {boss_damage}, image: {boss_image}")
             print(f"Calling spawn_boss with: bosses={bosses}, WIDTH={WIDTH}, HEIGHT={HEIGHT}, boss_width=200, boss_height=200, boss_health={boss_health}, boss_damage={boss_damage}, boss_image={boss_image}")
             spawn_boss(bosses, WIDTH, HEIGHT, 200, 200, boss_health, boss_damage, boss_image)
@@ -549,27 +549,34 @@ while running:
                 bullet[0] + bullet_image.get_width() > boss_x and
                 bullet[1] < boss_y + boss_image.get_height() and
                 bullet[1] + bullet_image.get_height() > boss_y):
-                boss[2] -= 20  # Reduce boss health by 80
+                boss[2] -= 20  # Reduce boss health by 20
                 bullets.remove(bullet)
                 if boss[2] <= 0:  # Remove boss if health is 0
                     bosses.remove(boss)
                     score += 500  # Reward for defeating the boss
-                break
 
-    # Check for collisions between auto turret bullets and the boss
-    for bullet in auto_turret_bullets[:]:
-        for boss in bosses[:]:
-            boss_x, boss_y, boss_health, _, boss_image = boss
-            if (bullet[0] < boss_x + boss_image.get_width() and
-                bullet[0] + police_bullet_image.get_width() > boss_x and
-                bullet[1] < boss_y + boss_image.get_height() and
-                bullet[1] + police_bullet_image.get_height() > boss_y):
-                boss[2] -= auto_turret_damage  # Reduce boss health by turret damage
-                auto_turret_bullets.remove(bullet)
-                if boss[2] <= 0:  # Remove boss if health is 0
-                    bosses.remove(boss)
-                    score += 500  # Reward for defeating the boss
-                break
+                    # Call the upgrade menu
+                    upgrade = reward_menu(screen, WIDTH, HEIGHT)
+                    print(f"Upgrade chosen: {upgrade}")
+
+                    # Apply the selected upgrade
+                    if upgrade == "firerate":
+                        rocket_cooldown_duration -= 1
+                    elif upgrade == "maxhp":
+                        max_health += 20
+                        forklift_health = max_health
+                    elif upgrade == "speed":
+                        line_speed += 2
+                        forklift_speed += 2
+                    elif upgrade == "autoturret":
+                        auto_turret_enabled = True
+                        auto_turret_damage += 5  # Increase auto turret damage by 5 each time
+
+                    # Proceed to the next round without increasing police car requirements
+                    current_round += 1
+                    round_timer = round_time_limit * 60  # Reset timer for the next round
+                    round_active = True
+                    break
 
     # Draw a health bar above the boss
     for boss in bosses:
