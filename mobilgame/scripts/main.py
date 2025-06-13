@@ -36,6 +36,11 @@ def draw_health_bar(surface, x, y, width, height, health, max_health):
     pygame.draw.rect(surface, GRAY, (x, y, width, height)) 
     pygame.draw.rect(surface, RED, (x, y, width * health_ratio, height))  
 
+def tint_image(image, tint_color):
+    tinted_image = image.copy()
+    tinted_image.fill(tint_color, special_flags=pygame.BLEND_RGBA_MULT)
+    return tinted_image
+
 line_width = 10
 line_height = 40
 line_spacing = 40
@@ -144,10 +149,23 @@ police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 police_bullets = []  # List to hold police bullets
 
 # Add this variable near the other turret variables, before the game loop:
-auto_turret_damage = 10  # Initial auto turret damage
+auto_turret_damage = 10  
 
-# Add this variable near the other boss-related variables
-boss_direction = 1  # 1 for right, -1 for left
+
+boss_direction = 1  
+
+left_button_image = pygame.image.load("pictures/LEFT.png")
+left_button_image = pygame.transform.scale(left_button_image, (80, 80)) 
+
+right_button_image = pygame.image.load("pictures/RIGHT.png")
+right_button_image = pygame.transform.scale(right_button_image, (80, 80))  
+
+ammo_button_image = pygame.image.load("pictures/AMMOPICTURE.png")
+ammo_button_image = pygame.transform.scale(ammo_button_image, (80, 80))
+
+left_button_rect = pygame.Rect(20, HEIGHT - 100, 80, 80)  # Bottom-left corner
+right_button_rect = pygame.Rect(120, HEIGHT - 100, 80, 80)  # Next to the left button
+ammo_button_rect = pygame.Rect(WIDTH - 100, HEIGHT - 100, 80, 80)  # Bottom-right corner
 
 # Load explosion frames
 explosion_frames = []
@@ -235,11 +253,7 @@ while running:
 
     mouse_x, mouse_y = pygame.mouse.get_pos()
 
-    forklift_x = mouse_x - forklift_width // 2
-    forklift_x = max(0, min(WIDTH - forklift_width, forklift_x))  
 
-    # Restrict forklift_y to the bottom half of the screen
-    forklift_y = max(HEIGHT // 2, min(HEIGHT - forklift_height, mouse_y - forklift_height // 2))
 
     for i in range(len(lines)):
         lines[i] += line_speed
@@ -255,12 +269,6 @@ while running:
     screen.blit(road_image, (0, road_scroll_y - HEIGHT))  
     screen.blit(road_image, (0, road_scroll_y)) 
 
-    if pygame.mouse.get_pressed()[0]:
-        forklift_speed = 10
-        line_speed = 10
-    else:
-        forklift_speed = 5
-        line_speed = 5
 
     # Spawn bullets when right mouse button is clicked, respecting cooldown
     if pygame.mouse.get_pressed()[2] and rocket_cooldown == 0:  # Right mouse button
@@ -622,18 +630,52 @@ while running:
     # Manage and draw explosions
     for explosion in explosions[:]:
         explosion["timer"] += 1
-        if explosion["timer"] >= 5:  # Adjust frame rate (higher = slower)
+        if explosion["timer"] >= 5:  
             explosion["timer"] = 0
             explosion["frame"] += 1
-            if explosion["frame"] >= len(explosion_frames):  # If last frame is reached
-                explosions.remove(explosion)  # Remove the explosion
+            if explosion["frame"] >= len(explosion_frames):
+                explosions.remove(explosion) 
                 continue
 
         # Draw the current frame of the explosion
         frame = explosion_frames[explosion["frame"]]
         screen.blit(frame, (explosion["x"], explosion["y"]))
 
+    keys = pygame.key.get_pressed()  # Get pressed keys
+
+    # Handle left button press
+    if keys[pygame.K_LEFT] or pygame.mouse.get_pressed()[0] and left_button_rect.collidepoint(mouse_x, mouse_y):
+        forklift_x -= forklift_speed
+        highlighted_image = tint_image(left_button_image, (200, 200, 200))  # Light gray tint
+        screen.blit(highlighted_image, left_button_rect)
+    else:
+        screen.blit(left_button_image, left_button_rect)
+
+    # Handle right button press
+    if keys[pygame.K_RIGHT] or pygame.mouse.get_pressed()[0] and right_button_rect.collidepoint(mouse_x, mouse_y):
+        forklift_x += forklift_speed
+        highlighted_image = tint_image(right_button_image, (200, 200, 200))  # Light gray tint
+        screen.blit(highlighted_image, right_button_rect)
+    else:
+        screen.blit(right_button_image, right_button_rect)
+
+    # Handle ammo button press
+    if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] and ammo_button_rect.collidepoint(mouse_x, mouse_y):
+        if rocket_cooldown == 0:  # Respect cooldown
+            bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
+            bullet_y = forklift_y
+            bullets.append([bullet_x, bullet_y])
+            rocket_cooldown = rocket_cooldown_duration
+        highlighted_image = tint_image(ammo_button_image, (200, 200, 200))  # Light gray tint
+        screen.blit(highlighted_image, ammo_button_rect)
+    else:
+        screen.blit(ammo_button_image, ammo_button_rect)
+
+    # Restrict forklift movement within screen boundaries
+    forklift_x = max(0, min(WIDTH - forklift_width, forklift_x))
+
     pygame.display.flip()
 
 pygame.quit()
 sys.exit()
+
