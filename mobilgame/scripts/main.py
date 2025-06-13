@@ -151,6 +151,10 @@ police_bullets = []  # List to hold police bullets
 # Add this variable near the other turret variables, before the game loop:
 auto_turret_damage = 10  
 
+three_bullets_enabled = False
+three_bullets_cooldown = 0
+three_bullets_cooldown_duration = 30  # Cooldown for 3 Bullets
+three_bullets_damage = 10  # Damage for each bullet
 
 boss_direction = 1  
 
@@ -402,7 +406,6 @@ while running:
 
     # Check if the round is complete
     if (police_cars_destroyed >= police_cars_required or round_timer <= 0) and round_active:
-
         round_active = False
         police_cars_destroyed = 0
         round_timer = round_time_limit * 60  # Reset timer for the next round
@@ -411,8 +414,9 @@ while running:
         police_cars = []
         police_bullets = []
 
-        # Show the reward menu and get the selected upgrade
-        upgrade = reward_menu(screen, WIDTH, HEIGHT)  # Pass the required arguments
+        # Show the normal reward menu with 3 upgrades
+        upgrade = reward_menu(screen, WIDTH, HEIGHT, num_upgrades=3)  # Normal 3-item menu
+        print(f"Upgrade chosen: {upgrade}")
 
         # Apply the selected upgrade
         if upgrade == "firerate":
@@ -436,7 +440,6 @@ while running:
         # --- Boss Spawning Logic ---
         if current_round % 4 == 0 and not bosses:  # Spawn the boss every 4th round
             print(f"Spawning boss with health: {boss_health}, damage: {boss_damage}, image: {boss_image}")
-            print(f"Calling spawn_boss with: bosses={bosses}, WIDTH={WIDTH}, HEIGHT={HEIGHT}, boss_width=200, boss_height=200, boss_health={boss_health}, boss_damage={boss_damage}, boss_image={boss_image}")
             spawn_boss(bosses, WIDTH, HEIGHT, 200, 200, boss_health, boss_damage, boss_image)
             print(f"Boss spawned at: {bosses}")  # Debugging line
 
@@ -458,11 +461,13 @@ while running:
         if auto_turret_cooldown <= 0:
             turret_bullet_x = forklift_x + forklift_width // 2 - police_bullet_image.get_width() // 2
             turret_bullet_y = forklift_y
-            auto_turret_bullets.append([turret_bullet_x, turret_bullet_y])
+            auto_turret_bullets.append([turret_bullet_x, turret_bullet_y, 0, -15])  # Ensure correct structure
             auto_turret_cooldown = auto_turret_cooldown_duration
 
+    # Update and draw bullets for auto turret
     for bullet in auto_turret_bullets[:]:
-        bullet[1] -= 15  # Fast upward
+        bullet[0] += bullet[2]  # Horizontal movement
+        bullet[1] += bullet[3]  # Vertical movement
         screen.blit(police_bullet_image, (bullet[0], bullet[1]))
         for car in police_cars[:]:
             if (bullet[0] < car[0] + police_car_width and
@@ -477,7 +482,7 @@ while running:
                     score += 10
                 break
         else:
-            if bullet[1] < 0:
+            if bullet[1] < 0:  # Remove bullets that go off-screen
                 auto_turret_bullets.remove(bullet)
 
     # --- UPGRADE MECHANIC ---
@@ -555,22 +560,13 @@ while running:
                     bosses.remove(boss)
                     score += 500  # Reward for defeating the boss
 
-                    # Call the upgrade menu
-                    upgrade = reward_menu(screen, WIDTH, HEIGHT)
+                    # Call the reward menu with only the "3 Bullets" upgrade
+                    upgrade = reward_menu(screen, WIDTH, HEIGHT, num_upgrades=1)
                     print(f"Upgrade chosen: {upgrade}")
 
-                    # Apply the selected upgrade
-                    if upgrade == "firerate":
-                        rocket_cooldown_duration -= 1
-                    elif upgrade == "maxhp":
-                        max_health += 20
-                        forklift_health = max_health
-                    elif upgrade == "speed":
-                        line_speed += 2
-                        forklift_speed += 2
-                    elif upgrade == "autoturret":
-                        auto_turret_enabled = True
-                        auto_turret_damage += 5  # Increase auto turret damage by 5 each time
+                    # Apply the "3 Bullets" upgrade
+                    if upgrade == "three_bullets":
+                        three_bullets_enabled = True
 
                     # Proceed to the next round without increasing police car requirements
                     current_round += 1
@@ -680,6 +676,39 @@ while running:
 
     # Restrict forklift movement within screen boundaries
     forklift_x = max(0, min(WIDTH - forklift_width, forklift_x))
+
+    # --- 3 BULLETS LOGIC ---
+    if three_bullets_enabled:
+        three_bullets_cooldown -= 1
+        if three_bullets_cooldown <= 0:
+            # Shoot bullets in three directions
+            bullet_x = forklift_x + forklift_width // 2 - police_bullet_image.get_width() // 2
+            bullet_y = forklift_y
+            auto_turret_bullets.append([bullet_x, bullet_y, 0, -15])  # Straight up
+            auto_turret_bullets.append([bullet_x, bullet_y, -10, -10])  # Left-up
+            auto_turret_bullets.append([bullet_x, bullet_y, 10, -10])  # Right-up
+            three_bullets_cooldown = three_bullets_cooldown_duration
+
+    # Update and draw bullets for "3 Bullets":
+    for bullet in auto_turret_bullets[:]:
+        bullet[0] += bullet[2]  # Horizontal movement
+        bullet[1] += bullet[3]  # Vertical movement
+        screen.blit(police_bullet_image, (bullet[0], bullet[1]))
+        for car in police_cars[:]:
+            if (bullet[0] < car[0] + police_car_width and
+                bullet[0] + police_bullet_image.get_width() > car[0] and
+                bullet[1] < car[1] + police_car_height and
+                bullet[1] + police_bullet_image.get_height() > car[1]):
+                car[2] -= three_bullets_damage  # Use variable damage
+                auto_turret_bullets.remove(bullet)
+                if car[2] <= 0:
+                    police_cars.remove(car)
+                    police_cars_destroyed += 1
+                    score += 10
+                break
+        else:
+            if bullet[1] < 0 or bullet[0] < 0 or bullet[0] > WIDTH:
+                auto_turret_bullets.remove(bullet)
 
     pygame.display.flip()
 
