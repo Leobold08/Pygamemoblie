@@ -93,12 +93,12 @@ except pygame.error as e:
 bosses = []
 boss_bullets = []
 boss_shoot_timer = 0 
-boss_health = 750
+BOSS_MAX_HEALTH = 750
+boss_health = BOSS_MAX_HEALTH
 boss_damage = -15                     
 
 clock = pygame.time.Clock()
 running = True
-
 
 invincible = False
 invincibility_timer = 0
@@ -107,7 +107,7 @@ invincibility_duration = 60
 auto_turret_enabled = False
 auto_turret_cooldown = 0
 auto_turret_cooldown_duration = 30  # Fast fire rate
-auto_turret_bullets = []  #
+auto_turret_bullets = []
 
 # List to hold active bullets
 bullets = []
@@ -148,7 +148,6 @@ police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 
 police_bullets = []  # List to hold police bullets
 
-# Add this variable near the other turret variables, before the game loop:
 auto_turret_damage = 10  
 
 three_bullets_enabled = False
@@ -188,7 +187,6 @@ def main_menu():
 
     police_car_menu_image = pygame.image.load("pictures/police_car.png")
     police_car_menu_image = pygame.transform.scale(police_car_menu_image, (police_car_width, police_car_height))
-
 
     button_width = 200
     button_height = 60
@@ -438,9 +436,9 @@ while running:
         round_active = True
 
         # --- Boss Spawning Logic ---
-        if current_round % 4 == 0 and not bosses:  # Spawn the boss every 4th round
-            print(f"Spawning boss with health: {boss_health}, damage: {boss_damage}, image: {boss_image}")
-            spawn_boss(bosses, WIDTH, HEIGHT, 200, 200, boss_health, boss_damage, boss_image)
+        if current_round % 2 == 0 and not bosses:  # Spawn the boss every 4th round
+            print(f"Spawning boss with health: {BOSS_MAX_HEALTH}, damage: {boss_damage}, image: {boss_image}")
+            spawn_boss(bosses, WIDTH, HEIGHT, 200, 200, BOSS_MAX_HEALTH, boss_damage, boss_image)
             print(f"Boss spawned at: {bosses}")  # Debugging line
 
     screen.blit(forklift_image, (forklift_x, forklift_y))
@@ -561,13 +559,17 @@ while running:
                     bosses.remove(boss)
                     score += 500  # Reward for defeating the boss
 
-                    # Call the reward menu with only the "3 Bullets" upgrade
-                    upgrade = reward_menu(screen, WIDTH, HEIGHT, num_upgrades=1)
+                    # Decide which boss upgrade to show
+                    boss_upgrade = "damage" if not auto_turret_enabled else "three_bullets"
+                    upgrade = reward_menu(screen, WIDTH, HEIGHT, num_upgrades=1, boss_upgrade=boss_upgrade)
                     print(f"Upgrade chosen: {upgrade}")
 
-                    # Apply the "3 Bullets" upgrade
+                    # Apply the boss upgrade
                     if upgrade == "three_bullets":
                         three_bullets_enabled = True
+                    elif upgrade == "damage_boost":
+                        three_bullets_damage = int(three_bullets_damage * 1.5)
+                        auto_turret_damage = int(auto_turret_damage * 1.5)
 
                     # Proceed to the next round without increasing police car requirements
                     current_round += 1
