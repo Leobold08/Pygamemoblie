@@ -95,7 +95,9 @@ boss_bullets = []
 boss_shoot_timer = 0 
 BOSS_MAX_HEALTH = 750
 boss_health = BOSS_MAX_HEALTH
-boss_damage = -15                     
+boss_damage = -15 
+boss_width = 200
+boss_height = 200                   
 
 clock = pygame.time.Clock()
 running = True
@@ -163,8 +165,7 @@ left_button_image = pygame.transform.scale(left_button_image, (80, 80))
 right_button_image = pygame.image.load("pictures/RIGHT.png")
 right_button_image = pygame.transform.scale(right_button_image, (80, 80))  
 
-ammo_button_image = pygame.image.load("pictures/AMMOPICTURE.png")
-ammo_button_image = pygame.transform.scale(ammo_button_image, (80, 80))
+
 
 left_button_rect = pygame.Rect(20, HEIGHT - 100, 80, 80)  # Bottom-left corner
 right_button_rect = pygame.Rect(120, HEIGHT - 100, 80, 80)  # Next to the left button
@@ -273,7 +274,7 @@ while running:
 
 
     # Spawn bullets when right mouse button is clicked, respecting cooldown
-    if pygame.mouse.get_pressed()[2] and rocket_cooldown == 0:  # Right mouse button
+    if rocket_cooldown == 0:  # Right mouse button
         bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
         bullet_y = forklift_y
         bullets.append([bullet_x, bullet_y]) 
@@ -436,9 +437,9 @@ while running:
         round_active = True
 
         # --- Boss Spawning Logic ---
-        if current_round % 2 == 0 and not bosses:  # Spawn the boss every 4th round
+        if not bosses:  # Spawn the boss every 4th round
             print(f"Spawning boss with health: {BOSS_MAX_HEALTH}, damage: {boss_damage}, image: {boss_image}")
-            spawn_boss(bosses, WIDTH, HEIGHT, 200, 200, BOSS_MAX_HEALTH, boss_damage, boss_image)
+            spawn_boss(bosses, 800, 600, boss_width, boss_height, boss_health, boss_damage, boss_image)
             print(f"Boss spawned at: {bosses}")  # Debugging line
 
     screen.blit(forklift_image, (forklift_x, forklift_y))
@@ -508,7 +509,7 @@ while running:
         if boss_shoot_timer >= 120: 
             boss_shoot_timer = 0
             for boss in bosses:
-                boss_shoot(boss, boss_bullets, bullet_speed=5)
+                boss_shoot(boss, boss_bullets, bullet_speed=7, boss_width=200, boss_height=200)
 
         # Update boss bullets
         update_boss_bullets(boss_bullets, screen, police_bullet_image)
@@ -583,8 +584,9 @@ while running:
         health_bar_width = boss_image.get_width()
         health_bar_height = 10
         health_ratio = boss_health / 500  # Assuming 500 is the max health
-        pygame.draw.rect(screen, RED, (boss_x, boss_y - 20, health_bar_width, health_bar_height))  # Background
+        pygame.draw.rect(screen, GRAY, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height))  # Background
         pygame.draw.rect(screen, GREEN, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height))  # Health
+        pygame.draw.rect(screen, BLACK, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height), 2)  # Border
 
     # --- Spawn normal cars ---
     normal_car_spawn_timer += 1
@@ -665,17 +667,6 @@ while running:
     else:
         screen.blit(right_button_image, right_button_rect)
 
-    # Handle ammo button press
-    if keys[pygame.K_SPACE] or pygame.mouse.get_pressed()[0] and ammo_button_rect.collidepoint(mouse_x, mouse_y):
-        if rocket_cooldown == 0:  # Respect cooldown
-            bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
-            bullet_y = forklift_y
-            bullets.append([bullet_x, bullet_y])
-            rocket_cooldown = rocket_cooldown_duration
-        highlighted_image = tint_image(ammo_button_image, (200, 200, 200))  # Light gray tint
-        screen.blit(highlighted_image, ammo_button_rect)
-    else:
-        screen.blit(ammo_button_image, ammo_button_rect)
 
     # Restrict forklift movement within screen boundaries
     forklift_x = max(0, min(WIDTH - forklift_width, forklift_x))

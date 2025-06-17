@@ -1,3 +1,4 @@
+
 import pygame 
 import random
 import math
@@ -17,28 +18,34 @@ def draw_bosses(bosses, screen):
         boss_x, boss_y, _, _, boss_image = boss  # Unpack the boss list correctly
         screen.blit(boss_image, (boss_x, boss_y))  # Draw the boss image at its position
 
-def boss_shoot(boss, boss_bullets, bullet_speed):
-    boss_x, boss_y, _, _, _ = boss  # Extract boss position
+def boss_shoot(boss, boss_bullets, bullet_speed, boss_width, boss_height):
+    boss_x, boss_y, _, _, _ = boss  # Ensure the boss list has at least 4 elements
     bullet_width = 20
     bullet_height = 20
 
     # Straight bullet
-    boss_bullets.append([boss_x + 100 - bullet_width // 2, boss_y + 200, 0, bullet_speed])
+    angle_straight = math.radians(90)  # Straight down
+    boss_bullets.append([
+        boss_x + boss_width // 2 - bullet_width // 2,
+        boss_y + boss_height,
+        bullet_speed * math.cos(angle_straight),
+        bullet_speed * math.sin(angle_straight)
+    ])
 
     # Left angled bullet (-45 degrees)
-    angle_left = math.radians(-45)
+    angle_left = math.radians(135)  # Adjusted to shoot left
     boss_bullets.append([
-        boss_x + 100 - bullet_width // 2,
-        boss_y + 200,
+        boss_x + boss_width // 2 - bullet_width // 2,
+        boss_y + boss_height,
         bullet_speed * math.cos(angle_left),
         bullet_speed * math.sin(angle_left)
     ])
 
     # Right angled bullet (+45 degrees)
-    angle_right = math.radians(45)
+    angle_right = math.radians(45)  # Adjusted to shoot right
     boss_bullets.append([
-        boss_x + 100 - bullet_width // 2,
-        boss_y + 200,
+        boss_x + boss_width // 2 - bullet_width // 2,
+        boss_y + boss_height,
         bullet_speed * math.cos(angle_right),
         bullet_speed * math.sin(angle_right)
     ])
@@ -67,6 +74,6 @@ boss_shoot_timer = 0  # Initialize the shoot timer
 boss_shoot_timer += 1
 if boss_shoot_timer >= 120:  # Shoot every 2 seconds (at 60 FPS)
     boss_shoot_timer = 0
-    boss_shoot(boss, boss_bullets, bullet_speed=5)
+    boss_shoot(boss, boss_bullets, bullet_speed=5, boss_width=100, boss_height=100)
 
 # Update and draw boss bullets
