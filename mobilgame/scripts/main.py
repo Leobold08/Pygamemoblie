@@ -2,9 +2,9 @@ import pygame
 import sys
 import random
 import os
-import math
 from upgrade import reward_menu
-from boss import spawn_boss, draw_bosses, boss_shoot, update_boss_bullets
+from boss import spawn_boss, draw_bosses, boss_shoot, update_boss_bullets, boss_shoot_tracking
+import math
 
 pygame.init()
 
@@ -57,6 +57,13 @@ forklift_image = pygame.transform.scale(forklift_image, (forklift_width, forklif
 police_car_image = pygame.image.load("pictures/police_car.png")
 police_car_width, police_car_height = 120, 120
 police_car_image = pygame.transform.scale(police_car_image, (police_car_width, police_car_height))
+police_cars = []  # List to hold police car positions
+police_spawn_timer = 0
+police_spawn_delay = 90 
+
+
+
+
 
 red_car_image = pygame.image.load("pictures/red_car.png")
 red_car_image = pygame.transform.scale(red_car_image, (120, 120))
@@ -65,33 +72,34 @@ blue_car_image = pygame.transform.scale(blue_car_image, (120, 120))
 green_car_image = pygame.image.load("pictures/green_car.png")
 green_car_image = pygame.transform.scale(green_car_image, (120, 120))
 
-police_cars = []  # List to hold police car positions
-police_spawn_timer = 0
-police_spawn_delay = 90  
+# Load road images
+road_images = {
+    "ROAD": pygame.image.load("pictures/ROAD.png"),
+    "SANDROAD": pygame.image.load("pictures/SANDROAD.png")
+}
 
-normal_cars = []  # Each car: [x, y, color]
-normal_car_types = [
-    ("red", red_car_image),
-    ("blue", blue_car_image),
-    ("green", green_car_image)
-]
-normal_car_spawn_timer = 0
-normal_car_spawn_delay = 60  # Adjust for spawn rate
+# Randomly select a road
+selected_road = random.choice(list(road_images.keys()))
+road_image = pygame.transform.scale(road_images[selected_road], (WIDTH, HEIGHT))
 
-# Load the road image
-road_image = pygame.image.load("pictures/ROAD.png")
-road_image = pygame.transform.scale(road_image, (WIDTH, HEIGHT))  # Scale to fullscreen dimensions
+# Load boss images
+tractor_image = pygame.image.load("pictures/TRACTOR.png")
+tractor_image = pygame.transform.scale(tractor_image, (200, 200))
 
-try:
-    boss_image = pygame.image.load("pictures/TRACTOR.png")
-    boss_image = pygame.transform.scale(boss_image, (200, 200))  # Scale the image
-except pygame.error as e:
-    print(f"Error loading boss image: {e}")
-    pygame.quit()
-    sys.exit()
+military_truck_image = pygame.image.load("pictures/MILITARY.png")
+military_truck_image = pygame.transform.scale(military_truck_image, (200, 200))
 
+# Boss-related variables
 bosses = []
-boss_bullets = []
+
+
+normal_cars = [] 
+police_spawn_delay = 120 
+round_time_limit = 120 
+normal_car_spawn_timer = 0
+normal_car_spawn_delay = 60 
+normal_car_types = [("red", red_car_image), ("blue", blue_car_image), ("green", green_car_image)]  # Car types
+boss_bullets = []  # List to hold boss bullets
 boss_shoot_timer = 0 
 BOSS_MAX_HEALTH = 750
 boss_health = BOSS_MAX_HEALTH
@@ -148,6 +156,10 @@ road_scroll_y = 0
 police_bullet_image = pygame.image.load("pictures/bullet.png")
 police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 
+# Load boss bullet image
+boss_bullet_image = pygame.image.load("pictures/BOSSRPGAMMO.png")
+boss_bullet_image = pygame.transform.scale(boss_bullet_image, (40, 40))
+
 police_bullets = []  # List to hold police bullets
 
 auto_turret_damage = 10  
@@ -167,9 +179,9 @@ right_button_image = pygame.transform.scale(right_button_image, (80, 80))
 
 
 
-left_button_rect = pygame.Rect(20, HEIGHT - 100, 80, 80)  # Bottom-left corner
-right_button_rect = pygame.Rect(120, HEIGHT - 100, 80, 80)  # Next to the left button
-ammo_button_rect = pygame.Rect(WIDTH - 100, HEIGHT - 100, 80, 80)  # Bottom-right corner
+left_button_rect = pygame.Rect(20, HEIGHT - 100, 80, 80) 
+right_button_rect = pygame.Rect(120, HEIGHT - 100, 80, 80) 
+ammo_button_rect = pygame.Rect(WIDTH - 100, HEIGHT - 100, 80, 80)  
 
 # Load explosion frames
 explosion_frames = []
@@ -207,7 +219,6 @@ def main_menu():
         pygame.draw.rect(screen, WHITE, play_button_rect)
         pygame.draw.rect(screen, WHITE, quit_button_rect)
 
-        # Add text to buttons
         font = pygame.font.SysFont(None, 48)
         play_text = font.render("Play", True, BLACK)
         quit_text = font.render("Quit", True, BLACK)
@@ -232,6 +243,8 @@ def main_menu():
 
 main_menu()
 
+
+
 current_round = 1
 round_active = True
 police_cars_to_spawn = 20  # Number of police cars to spawn per round
@@ -245,8 +258,8 @@ auto_turret_cooldown = 0
 auto_turret_cooldown_duration = 30  # Fast fire rate     
 auto_turret_bullets = []
 
-#boss_direction = random.choice([-2, 2])
 
+# Main game loop
 while running:
     clock.tick(60)
 
@@ -437,12 +450,19 @@ while running:
         round_active = True
 
         # --- Boss Spawning Logic ---
-        if not bosses:  # Spawn the boss every 4th round
-            print(f"Spawning boss with health: {BOSS_MAX_HEALTH}, damage: {boss_damage}, image: {boss_image}")
-            spawn_boss(bosses, 800, 600, boss_width, boss_height, boss_health, boss_damage, boss_image)
-            print(f"Boss spawned at: {bosses}")  # Debugging line
+        if not bosses:  # Spawn a boss every 5 rounds
+            if selected_road == "ROAD":
+                boss_type = "normal"
+                boss_image = tractor_image
+            elif selected_road == "SANDROAD":
+                boss_type = "tracking"
+                boss_image = military_truck_image
+
+            spawn_boss(bosses, WIDTH, HEIGHT, boss_width, boss_height, boss_health, boss_damage, boss_image, boss_type)
+            bosses[-1].append(0)  # 0 is the shoot timer
 
     screen.blit(forklift_image, (forklift_x, forklift_y))
+
 
     draw_health_bar(screen, 20, 20, 200, 20, forklift_health, max_health)
     score_text = font.render(f"Score: {score}", True, WHITE)
@@ -485,34 +505,32 @@ while running:
             if bullet[1] < 0:  # Remove bullets that go off-screen
                 auto_turret_bullets.remove(bullet)
 
-    # --- UPGRADE MECHANIC ---
-    # REMOVE or COMMENT OUT this block:
-    # if score >= 100 and not upgrade_given:
-    #     chosen_upgrade = reward_menu(screen, WIDTH, HEIGHT)
-    #     print("Upgrade chosen:", chosen_upgrade)
-    #     upgrade_given = True
-
-
     if bosses:
         for boss in bosses[:]:
-            boss[0] += boss_direction * 3  # Move left or right
-            if boss[0] <= 0 or boss[0] + 200 >= WIDTH:  # Reverse direction at edges
-                boss_direction *= -1
+            boss_type = boss[5]  # Get the boss type
+            if len(boss) < 7:
+                boss.append(0)  # Add shoot timer if missing
 
-            # Keep the boss in the top half of the screen
+            boss[6] += 1  # Increment shoot timer
+
+            if boss_type == "tracking":
+                if boss[6] >= 60:  # Shoot every 60 frames (1 second)
+                    boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed=3, bullet_image=boss_bullet_image)
+                    boss[6] = 0
+            else:  # normal boss type
+                if boss[6] >= 60:
+                    boss_shoot(boss, boss_bullets, bullet_speed=3, boss_width=boss_width, boss_height=boss_height, bullet_image=police_bullet_image)
+                    boss[6] = 0
+
+            boss[0] += boss_direction * 3
+            if boss[0] <= 0 or boss[0] + 200 >= WIDTH:
+                boss_direction *= -1
             boss[1] = min(boss[1], HEIGHT // 2 - 200)
 
-        draw_bosses(bosses, screen)  # Draw the boss
-
-        # Boss shooting logic
-        boss_shoot_timer += 1
-        if boss_shoot_timer >= 120: 
-            boss_shoot_timer = 0
-            for boss in bosses:
-                boss_shoot(boss, boss_bullets, bullet_speed=7, boss_width=200, boss_height=200)
+        draw_bosses(bosses, screen, boss_image)  # Draw the boss
 
         # Update boss bullets
-        update_boss_bullets(boss_bullets, screen, police_bullet_image)
+        update_boss_bullets(boss_bullets, screen, boss_bullet_image, WIDTH, HEIGHT)
 
         # Check for collisions between boss bullets and the forklift
         for bullet in boss_bullets[:]:
@@ -528,19 +546,21 @@ while running:
 
 
         # Check for collision with the forklift
-        for boss in bosses[:]:
-            boss_x, boss_y, boss_health, _, _ = boss
-            if (forklift_x < boss_x + 200 and
-                forklift_x + forklift_width > boss_x and
-                forklift_y < boss_y + 200 and
-                forklift_y + forklift_height > boss_y):
-                if not invincible:
-                    forklift_health -= boss_damage
-                    invincible = True
-                if forklift_health <= 0:
-                    pygame.quit()
-                    sys.exit()
+        for boss in bosses:
+            boss_x, boss_y, boss_health, boss_damage, boss_image, boss_type = boss[:6]  
 
+            for bullet in boss_bullets:
+                # Check collision between bullet and boss
+                if (bullet[0] < boss_x + boss_width and
+                    bullet[0] + bullet_image.get_width() > boss_x and
+                    bullet[1] < boss_y + boss_height and
+                    bullet[1] + bullet_image.get_height() > boss_y):
+                    # Handle collision (e.g., reduce boss health, remove bullet)
+                    boss_health -= 10
+                    boss_bullets.remove(bullet)
+
+            # Update the boss list with the new health
+            boss[2] = boss_health
 
             if boss_health <= 0:
                 bosses.remove(boss)
@@ -549,11 +569,13 @@ while running:
     # Check for collisions between bullets and the boss
     for bullet in bullets[:]:
         for boss in bosses[:]:
-            boss_x, boss_y, boss_health, _, boss_image = boss
-            if (bullet[0] < boss_x + boss_image.get_width() and
-                bullet[0] + bullet_image.get_width() > boss_x and
-                bullet[1] < boss_y + boss_image.get_height() and
-                bullet[1] + bullet_image.get_height() > boss_y):
+            boss_x, boss_y, boss_health, boss_damage, boss_image, boss_type = boss[:6] 
+            boss_width, boss_height = boss_image.get_width(), boss_image.get_height()
+            bullet_width, bullet_height = bullet_image.get_size()
+            if (bullet[0] < boss_x + boss_width and
+                bullet[0] + bullet_width > boss_x and
+                bullet[1] < boss_y + boss_height and
+                bullet[1] + bullet_height > boss_y):
                 boss[2] -= 20  # Reduce boss health by 20
                 bullets.remove(bullet)
                 if boss[2] <= 0:  # Remove boss if health is 0
@@ -580,13 +602,19 @@ while running:
 
     # Draw a health bar above the boss
     for boss in bosses:
-        boss_x, boss_y, boss_health, _, boss_image = boss
-        health_bar_width = boss_image.get_width()
+        boss_x, boss_y, boss_health, boss_damage, boss_image, boss_type = boss[:6]
+        boss_image = pygame.transform.scale(boss_image, (200, 200))  # Unpack the boss list
+
+        # Use the correct boss_image (Pygame surface) to get the width
+        health_bar_width = boss_width
         health_bar_height = 10
-        health_ratio = boss_health / 500  # Assuming 500 is the max health
-        pygame.draw.rect(screen, GRAY, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height))  # Background
-        pygame.draw.rect(screen, GREEN, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height))  # Health
-        pygame.draw.rect(screen, BLACK, (boss_x, boss_y - 20, health_bar_width * health_ratio, health_bar_height), 2)  # Border
+        health_bar_x = boss_x
+        health_bar_y = boss_y - 20  # Position the health bar above the boss
+
+        # Draw the health bar
+        pygame.draw.rect(screen, RED, (health_bar_x, health_bar_y, health_bar_width, health_bar_height))  # Background
+        pygame.draw.rect(screen, GREEN, (health_bar_x, health_bar_y, health_bar_width * (boss_health / BOSS_MAX_HEALTH), health_bar_height))  # Health
+        pygame.draw.rect(screen, BLACK, (health_bar_x, health_bar_y, health_bar_width, health_bar_height), 2)  # Border
 
     # --- Spawn normal cars ---
     normal_car_spawn_timer += 1
@@ -704,6 +732,7 @@ while running:
         else:
             if bullet[1] < 0 or bullet[0] < 0 or bullet[0] > WIDTH:
                 auto_turret_bullets.remove(bullet)
+
 
     pygame.display.flip()
 
