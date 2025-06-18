@@ -4,9 +4,13 @@ import random
 import os
 from upgrade import reward_menu
 from boss import spawn_boss, draw_bosses, boss_shoot, update_boss_bullets, boss_shoot_tracking
+from upgrade import reward_menu, military_boss_reward_menu
 import math
 
 pygame.init()
+
+double_shot_enabled = False
+double_shot_spacing = 30 
 
 WIDTH, HEIGHT = 1280, 640
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -124,7 +128,7 @@ bullets = []
 
 # Cooldown timer for rockets
 rocket_cooldown = 0
-rocket_cooldown_duration = 20  # 2 seconds at 60 FPS
+rocket_cooldown_duration = 45  # Increased from 20 to 45 for slower fire rate
 
 Hearts_image = pygame.image.load("pictures/heart.png")
 Hears = pygame.transform.scale(Hearts_image, (50, 50))
@@ -135,17 +139,123 @@ keys = pygame.key.get_pressed()
 # List to hold active hearts
 hearts = []
 
+# Get the directory where the script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+HIGHSCORE_PATH = os.path.join(os.path.dirname(os.path.dirname(SCRIPT_DIR)), "highscore.txt")
+
 # Load highscore from file
-highscore_file = "highscore.txt"
-if os.path.exists(highscore_file):
-    with open(highscore_file, "r") as f:
-        try:
-            highscore = int(f.read())
-        except:
-            highscore = 0
-else:
+try:
+    with open(HIGHSCORE_PATH, "r") as f:
+        highscore = int(f.read().strip())
+except (FileNotFoundError, ValueError):
     highscore = 0
 
+# Initialize score
+score = 0  # Current score
+upgrade_given = False  
+
+font = pygame.font.SysFont(None, 48)  # Add this after pygame.init() or after setting up the screen
+
+road_scroll_y = 0
+
+# Load police bullet image
+police_bullet_image = pygame.image.load("pictures/bullet.png")
+police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
+
+# Load boss bullet image
+boss_bullet_image = pygame.image.load("pictures/BOSSRPGAMMO.png")
+boss_bullet_image = pygame.transform.scale(boss_bullet_image, (40, 40))
+
+police_bullets = []  # List to hold police bullets
+
+auto_turret_damage = 10  
+
+three_bullets_enabled = False
+three_bullets_cooldown = 0
+three_bullets_cooldown_duration = 30  # Cooldown for 3 Bullets
+three_bullets_damage = 10  # Damage for each bullet
+
+boss_direction = 1  
+
+left_button_image = pygame.image.load("pictures/LEFT.png")
+left_button_image = pygame.transform.scale(left_button_image, (80, 80)) 
+
+right_button_image = pygame.image.load("pictures/RIGHT.png")
+right_button_image = pygame.transform.scale(right_button_image, (80, 80))  
+
+
+
+left_button_rect = pygame.Rect(20, HEIGHT - 100, 80, 80) 
+right_button_rect = pygame.Rect(WIDTH - 100, HEIGHT - 100, 80, 80)
+
+# Load explosion frames
+explosion_frames = []
+for i in range(5):  # Assuming the GIF has 5 frames
+    frame = pygame.image.load(f"kaput/frame_{i}.png")
+    frame = pygame.transform.scale(frame, (120, 120))  # Scale to match the car size
+    explosion_frames.append(frame)
+
+explosions = []  # List to hold active explosions
+
+def main_menu():
+    menu_running = True
+
+    forklift_menu_image = pygame.image.load("pictures/forklift.png")
+    forklift_menu_image = pygame.transform.scale(forklift_menu_image, (forklift_width, forklift_height))
+
+    police_car_menu_image = pygame.image.load("pictures/police_car.png")
+    police_car_menu_image = pygame.transform.scale(police_car_menu_image, (police_car_width, police_car_height))
+
+    button_width = 200
+    button_height = 60
+    play_button_rect = pygame.Rect(WIDTH // 2 - button_width // 2, HEIGHT // 2 - 100, button_width, button_height)
+    quit_button_rect = pygame.Rect(WIDTH // 2 - button_width // 2, HEIGHT // 2 + 50, button_width, button_height)
+
+    while menu_running:
+        screen.fill(GRAY) 
+
+
+        screen.blit(forklift_menu_image, (WIDTH // 2 - forklift_width // 2, HEIGHT // 2 - 250))
+        screen.blit(police_car_menu_image, (WIDTH // 2 - police_car_width - 150, HEIGHT // 2 - 25))
+        screen.blit(police_car_menu_image, (WIDTH // 2 - police_car_width // 2, HEIGHT // 2 - 25))
+        screen.blit(police_car_menu_image, (WIDTH // 2 + police_car_width, HEIGHT // 2 - 25))
+
+   
+        pygame.draw.rect(screen, WHITE, play_button_rect)
+        pygame.draw.rect(screen, WHITE, quit_button_rect)
+
+        font = pygame.font.SysFont(None, 48)
+        play_text = font.render("Play", True, BLACK)
+        quit_text = font.render("Quit", True, BLACK)
+        screen.blit(play_text, (play_button_rect.x + button_width // 2 - play_text.get_width() // 2,
+                                play_button_rect.y + button_height // 2 - play_text.get_height() // 2))
+        screen.blit(quit_text, (quit_button_rect.x + button_width // 2 - quit_text.get_width() // 2,
+                                quit_button_rect.y + button_height // 2 - quit_text.get_height() // 2))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                if play_button_rect.collidepoint(mouse_x, mouse_y):
+                    menu_running = False  # Start the game
+                elif quit_button_rect.collidepoint(mouse_x, mouse_y):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.flip()
+
+main_menu()
+
+# Load highscore from file
+try:
+    with open(HIGHSCORE_PATH, "r") as f:
+        highscore = int(f.read().strip())
+except (FileNotFoundError, ValueError):
+    highscore = 0
+
+# Initialize score
 score = 0  # Current score
 upgrade_given = False  
 
@@ -288,9 +398,19 @@ while running:
 
     # Spawn bullets when right mouse button is clicked, respecting cooldown
     if rocket_cooldown == 0:  # Right mouse button
-        bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
-        bullet_y = forklift_y
-        bullets.append([bullet_x, bullet_y]) 
+        if double_shot_enabled:
+            # Shoot two bullets side by side
+            bullet_x1 = forklift_x + (forklift_width // 2) - double_shot_spacing - bullet_image.get_width() // 2
+            bullet_x2 = forklift_x + (forklift_width // 2) + double_shot_spacing - bullet_image.get_width() // 2
+            bullet_y = forklift_y
+            bullets.append([bullet_x1, bullet_y])
+            bullets.append([bullet_x2, bullet_y])
+        else:
+            # Normal single bullet
+            bullet_x = forklift_x + forklift_width // 2 - bullet_image.get_width() // 2
+            bullet_y = forklift_y
+            bullets.append([bullet_x, bullet_y])
+        
         rocket_cooldown = rocket_cooldown_duration 
 
     # Update cooldown timer
@@ -458,6 +578,8 @@ while running:
                 boss_type = "tracking"
                 boss_image = military_truck_image
 
+            # Reset boss health before spawning
+            boss_health = BOSS_MAX_HEALTH  # Reset to full health
             spawn_boss(bosses, WIDTH, HEIGHT, boss_width, boss_height, boss_health, boss_damage, boss_image, boss_type)
             bosses[-1].append(0)  # 0 is the shoot timer
 
@@ -514,11 +636,11 @@ while running:
             boss[6] += 1  # Increment shoot timer
 
             if boss_type == "tracking":
-                if boss[6] >= 180:  # Shoot every 60 frames (1 second)
+                if boss[6] >= 180:  # Shoot every 180 frames (3 seconds)
                     boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed=3, bullet_image=boss_bullet_image)
                     boss[6] = 0
             else:  # normal boss type
-                if boss[6] >= 60:
+                if boss[6] >= 180:  # Changed from 60 to 120 frames (2 seconds)
                     boss_shoot(boss, boss_bullets, bullet_speed=3, boss_width=boss_width, boss_height=boss_height, bullet_image=police_bullet_image)
                     boss[6] = 0
 
@@ -582,21 +704,26 @@ while running:
                     bosses.remove(boss)
                     score += 500  # Reward for defeating the boss
 
-                    # Decide which boss upgrade to show
-                    boss_upgrade = "damage" if not auto_turret_enabled else "three_bullets"
-                    upgrade = reward_menu(screen, WIDTH, HEIGHT, num_upgrades=1, boss_upgrade=boss_upgrade)
-                    print(f"Upgrade chosen: {upgrade}")
+                    # Check boss type for specific upgrades
+                    if boss_type == "tracking":  # Military truck boss
+                        # Show military boss specific menu
+                        upgrade = military_boss_reward_menu(screen, WIDTH, HEIGHT)
+                        double_shot_enabled = True
+                        print("Military Boss Defeated - Double Shot upgrade obtained!")
+                    else:  # Normal boss (tractor)
+                        # Show normal boss upgrade menu
+                        upgrade = reward_menu(screen, WIDTH, HEIGHT, num_upgrades=1)
+                        print(f"Normal Boss Defeated - Upgrade chosen: {upgrade}")
 
-                    # Apply the boss upgrade
-                    if upgrade == "three_bullets":
-                        three_bullets_enabled = True
-                    elif upgrade == "damage_boost":
-                        three_bullets_damage = int(three_bullets_damage * 1.5)
-                        auto_turret_damage = int(auto_turret_damage * 1.5)
+                        # Apply the chosen upgrade
+                        if upgrade == "three_bullets":
+                            three_bullets_enabled = True
+                            three_bullets_damage = int(three_bullets_damage * 1.5)  # 1.5x damage
+                            print("Three Bullets upgrade with 1.5x damage obtained!")
 
-                    # Proceed to the next round without increasing police car requirements
+                    # Proceed to next round
                     current_round += 1
-                    round_timer = round_time_limit * 60  # Reset timer for the next round
+                    round_timer = round_time_limit * 60
                     round_active = True
                     break
 
@@ -734,7 +861,18 @@ while running:
                 auto_turret_bullets.remove(bullet)
 
 
+    # Update highscore if current score is higher
+    if score > highscore:
+        highscore = score
+
     pygame.display.flip()
+
+# After the game loop ends, save the highscore
+try:
+    with open(HIGHSCORE_PATH, "w") as f:
+        f.write(str(highscore))
+except IOError as e:
+    print(f"Could not save highscore: {e}")
 
 pygame.quit()
 sys.exit()

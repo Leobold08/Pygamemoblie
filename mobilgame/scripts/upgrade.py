@@ -12,21 +12,23 @@ def reward_menu(screen, WIDTH, HEIGHT, num_upgrades=3, boss_upgrade=None):  # De
     forklift_img = pygame.transform.scale(forklift_img, (100, 100))
     turret_img = pygame.image.load("pictures/bullet.png")
     turret_img = pygame.transform.scale(turret_img, (100, 100))
+    bullet_img = pygame.image.load("pictures/bullet.png")  # Add bullet image for double shot
+    bullet_img = pygame.transform.scale(bullet_img, (100, 100))
 
     # Define available upgrades
-    upgrades = [
-        ("firerate", rpgammo_img, "Faster Fire Rate"),
-        ("maxhp", heart_img, "Increase Max HP"),
-        ("speed", forklift_img, "Faster Movement"),
-        ("autoturret", turret_img, "Auto Turret"),
-    ]
-
-    # Boss upgrade logic
-    if num_upgrades == 1:
-        if boss_upgrade == "damage":
-            upgrades = [("damage_boost", rpgammo_img, "1.5x Damage")]
-        else:
-            upgrades = [("three_bullets", turret_img, "3 Bullets Upgrade")]
+    if num_upgrades == 1:  # Boss upgrades
+        upgrades = [
+            ("three_bullets", turret_img, "3 Bullets (1.5x Damage)")  # Only show 3 bullets for normal boss
+        ]
+        num_upgrades = 1  # Force 1 upgrade for normal boss
+    else:
+        # Regular upgrades remain the same
+        upgrades = [
+            ("firerate", rpgammo_img, "Faster Fire Rate"),
+            ("maxhp", heart_img, "Increase Max HP"),
+            ("speed", forklift_img, "Faster Movement"),
+            ("autoturret", turret_img, "Auto Turret"),
+        ]
 
     random.shuffle(upgrades)
     upgrades = upgrades[:num_upgrades]  # Pick the specified number of upgrades
@@ -43,6 +45,56 @@ def reward_menu(screen, WIDTH, HEIGHT, num_upgrades=3, boss_upgrade=None):  # De
     while menu_running:
         screen.fill((50, 50, 50))
         text = font_big.render("Choose Your Upgrade!", True, (255, 255, 255))
+        screen.blit(text, (WIDTH // 2 - text.get_width() // 2, 100))
+
+        rects = []
+        for i, (name, img, label) in enumerate(upgrades):
+            x = start_x + i * (100 + spacing)
+            rect = pygame.Rect(x, y, 100, 100)
+            rects.append((rect, name))
+            screen.blit(img, (x, y))
+            label_surface = font_small.render(label, True, (255, 255, 255))
+            label_x = x + 50 - label_surface.get_width() // 2
+            label_y = y + 110
+            screen.blit(label_surface, (label_x, label_y))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                for rect, name in rects:
+                    if rect.collidepoint(mx, my):
+                        menu_running = False
+                        return name
+
+def military_boss_reward_menu(screen, WIDTH, HEIGHT):
+    # Load images
+    bullet_img = pygame.image.load("pictures/bullet.png")
+    bullet_img = pygame.transform.scale(bullet_img, (100, 100))
+
+    # Define military boss specific upgrades
+    upgrades = [
+        ("double_shot", bullet_img, "Double Shot")
+    ]
+    num_upgrades = 1
+
+    # Menu setup
+    spacing = 100
+    total_width = num_upgrades * 100
+    start_x = WIDTH // 2 - total_width // 2
+    y = HEIGHT // 2 - 50
+
+    menu_running = True
+    font_small = pygame.font.SysFont(None, 32)
+    font_big = pygame.font.SysFont(None, 60)
+
+    while menu_running:
+        screen.fill((50, 50, 50))
+        text = font_big.render("Military Boss Defeated!", True, (255, 255, 255))
         screen.blit(text, (WIDTH // 2 - text.get_width() // 2, 100))
 
         rects = []
