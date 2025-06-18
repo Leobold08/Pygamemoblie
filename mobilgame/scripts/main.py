@@ -130,6 +130,7 @@ Hearts_image = pygame.image.load("pictures/heart.png")
 Hears = pygame.transform.scale(Hearts_image, (50, 50))
 hearts_delay = 1
 hearts_timer = 0
+keys = pygame.key.get_pressed()  
 
 # List to hold active hearts
 hearts = []
@@ -180,8 +181,7 @@ right_button_image = pygame.transform.scale(right_button_image, (80, 80))
 
 
 left_button_rect = pygame.Rect(20, HEIGHT - 100, 80, 80) 
-right_button_rect = pygame.Rect(120, HEIGHT - 100, 80, 80) 
-ammo_button_rect = pygame.Rect(WIDTH - 100, HEIGHT - 100, 80, 80)  
+right_button_rect = pygame.Rect(WIDTH - 100, HEIGHT - 100, 80, 80)
 
 # Load explosion frames
 explosion_frames = []
@@ -514,7 +514,7 @@ while running:
             boss[6] += 1  # Increment shoot timer
 
             if boss_type == "tracking":
-                if boss[6] >= 60:  # Shoot every 60 frames (1 second)
+                if boss[6] >= 180:  # Shoot every 60 frames (1 second)
                     boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed=3, bullet_image=boss_bullet_image)
                     boss[6] = 0
             else:  # normal boss type
@@ -680,7 +680,7 @@ while running:
     keys = pygame.key.get_pressed()  # Get pressed keys
 
     # Handle left button press
-    if keys[pygame.K_LEFT] or pygame.mouse.get_pressed()[0] and left_button_rect.collidepoint(mouse_x, mouse_y):
+    if keys[pygame.K_LEFT] or pygame.mouse.get_pressed()[0] and left_button_rect.collidepoint(mouse_x, mouse_y) or keys[pygame.K_a]:
         forklift_x -= forklift_speed
         highlighted_image = tint_image(left_button_image, (200, 200, 200))  # Light gray tint
         screen.blit(highlighted_image, left_button_rect)
@@ -688,7 +688,7 @@ while running:
         screen.blit(left_button_image, left_button_rect)
 
     # Handle right button press
-    if keys[pygame.K_RIGHT] or pygame.mouse.get_pressed()[0] and right_button_rect.collidepoint(mouse_x, mouse_y):
+    if keys[pygame.K_RIGHT] or pygame.mouse.get_pressed()[0] and right_button_rect.collidepoint(mouse_x, mouse_y) or keys[pygame.K_d]:
         forklift_x += forklift_speed
         highlighted_image = tint_image(right_button_image, (200, 200, 200))  # Light gray tint
         screen.blit(highlighted_image, right_button_rect)

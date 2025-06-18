@@ -19,33 +19,36 @@ def boss_shoot(boss, boss_bullets, bullet_speed, boss_width, boss_height, bullet
     bullet_height = bullet_image.get_height()
 
     # Straight bullet
-    angle_straight = math.radians(90)  # Straight down
+    angle_straight = math.radians(90)
+    rotated_straight = pygame.transform.rotate(bullet_image, 180)  # Straight down
     boss_bullets.append([
         boss_x + boss_width // 2 - bullet_width // 2,
         boss_y + boss_height,
         bullet_speed * math.cos(angle_straight),
         bullet_speed * math.sin(angle_straight),
-        bullet_image  # Add bullet image to bullet data
+        rotated_straight
     ])
 
     # Left angled bullet (-45 degrees)
     angle_left = math.radians(135)  # Adjusted to shoot left
+    rotated_left = pygame.transform.rotate(bullet_image, 135)
     boss_bullets.append([
         boss_x + boss_width // 2 - bullet_width // 2,
         boss_y + boss_height,
         bullet_speed * math.cos(angle_left),
         bullet_speed * math.sin(angle_left),
-        bullet_image  # Add bullet image to bullet data
+        rotated_left
     ])
 
     # Right angled bullet (+45 degrees)
-    angle_right = math.radians(45)  # Adjusted to shoot right
+    angle_right = math.radians(45)
+    rotated_right = pygame.transform.rotate(bullet_image, 45)  # Adjusted to shoot right
     boss_bullets.append([
         boss_x + boss_width // 2 - bullet_width // 2,
         boss_y + boss_height,
         bullet_speed * math.cos(angle_right),
         bullet_speed * math.sin(angle_right),
-        bullet_image  # Add bullet image to bullet data
+        rotated_right
     ])
 
 def boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed, bullet_image):
@@ -54,12 +57,16 @@ def boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed
     bullet_height = bullet_image.get_height()
 
     # Calculate initial bullet position from the bottom-center of the boss
-    bullet_x = boss_x + 100 - bullet_width // 2  # Center horizontally (boss width is 200)
-    bullet_y = boss_y + 200  # Bottom of the boss (boss height is 200)
+    bullet_x = boss_x + 100 - bullet_width // 2
+    bullet_y = boss_y + 200
 
     # Calculate direction vector to forklift
     dx = forklift_x - bullet_x
     dy = forklift_y - bullet_y
+    
+    # Calculate rotation angle based on direction
+    angle = math.degrees(math.atan2(-dy, dx)) - 90  # -90 to adjust for image orientation
+    rotated_bullet = pygame.transform.rotate(bullet_image, angle)
     
     # Normalize the direction vector
     distance = math.sqrt(dx**2 + dy**2)
@@ -67,25 +74,26 @@ def boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed
         dx = (dx / distance) * bullet_speed
         dy = (dy / distance) * bullet_speed
 
-    # Add the bullet with its velocity and image
+    # Add the bullet with its velocity, image and rotation angle
     boss_bullets.append([
         bullet_x,          # x position
         bullet_y,          # y position
-        dx,               # x velocity (scaled by speed)
-        dy,               # y velocity (scaled by speed)
-        bullet_image      # bullet image
+        dx,               # x velocity
+        dy,               # y velocity
+        rotated_bullet,   # rotated bullet image
+        angle            # store angle for continuous rotation
     ])
 
 def update_boss_bullets(boss_bullets, screen, bullet_image, WIDTH, HEIGHT):
     for bullet in boss_bullets[:]:
-        bullet[0] += bullet[2]  # Horizontal movement
-        bullet[1] += bullet[3]  # Vertical movement
-        if len(bullet) > 4:  # If bullet has a specific image
-            screen.blit(bullet[4], (bullet[0], bullet[1]))
-        else:
-            screen.blit(bullet_image, (bullet[0], bullet[1]))
+        bullet[0] += bullet[2]  # Update x position
+        bullet[1] += bullet[3]  # Update y position
+        
+        # Get the center position for rotated image
+        rotated_rect = bullet[4].get_rect(center=(bullet[0], bullet[1]))
+        screen.blit(bullet[4], rotated_rect)  # Draw rotated bullet
 
-        # Remove bullets that go off-screen
+
         if bullet[0] < 0 or bullet[0] > WIDTH or bullet[1] < 0 or bullet[1] > HEIGHT:
             boss_bullets.remove(bullet)
 
