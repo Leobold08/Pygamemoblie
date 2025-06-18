@@ -2,6 +2,8 @@ import pygame
 import sys
 import random
 
+autoturret_enabled = False  
+
 def reward_menu(screen, WIDTH, HEIGHT, num_upgrades=3, boss_upgrade=None):  # Default to 3 upgrades
     # Load images
     rpgammo_img = pygame.image.load("pictures/RPGAMMO.png")
@@ -16,11 +18,17 @@ def reward_menu(screen, WIDTH, HEIGHT, num_upgrades=3, boss_upgrade=None):  # De
     bullet_img = pygame.transform.scale(bullet_img, (100, 100))
 
     # Define available upgrades
-    if num_upgrades == 1:  # Boss upgrades
-        upgrades = [
-            ("three_bullets", turret_img, "3 Bullets (1.5x Damage)")  # Only show 3 bullets for normal boss
-        ]
-        num_upgrades = 1  # Force 1 upgrade for normal boss
+    if num_upgrades == 1:
+        
+        if autoturret_enabled:  # Boss upgrades
+            upgrades = [
+                ("triple_shot", bullet_img, "Triple shot"),
+                ("damage_boost", rpgammo_img, "1.5x Damage")
+            ]
+        else:
+            upgrades = [
+                ("damage_boost", rpgammo_img, "1.5x Damage")
+            ]
     else:
         # Regular upgrades remain the same
         upgrades = [

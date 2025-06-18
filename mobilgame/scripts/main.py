@@ -269,7 +269,7 @@ police_bullet_image = pygame.transform.scale(police_bullet_image, (30, 30))
 
 # Load boss bullet image
 boss_bullet_image = pygame.image.load("pictures/BOSSRPGAMMO.png")
-boss_bullet_image = pygame.transform.scale(boss_bullet_image, (40, 40))
+boss_bullet_image = pygame.transform.scale(boss_bullet_image, (60, 60))
 
 police_bullets = []  # List to hold police bullets
 
@@ -570,7 +570,7 @@ while running:
         round_active = True
 
         # --- Boss Spawning Logic ---
-        if not bosses:  # Spawn a boss every 5 rounds
+        if  not bosses: #adds 
             if selected_road == "ROAD":
                 boss_type = "normal"
                 boss_image = tractor_image
@@ -636,7 +636,7 @@ while running:
             boss[6] += 1  # Increment shoot timer
 
             if boss_type == "tracking":
-                if boss[6] >= 180:  # Shoot every 180 frames (3 seconds)
+                if boss[6] >=120 : 
                     boss_shoot_tracking(boss, boss_bullets, forklift_x, forklift_y, bullet_speed=3, bullet_image=boss_bullet_image)
                     boss[6] = 0
             else:  # normal boss type
@@ -718,8 +718,11 @@ while running:
                         # Apply the chosen upgrade
                         if upgrade == "three_bullets":
                             three_bullets_enabled = True
-                            three_bullets_damage = int(three_bullets_damage * 1.5)  # 1.5x damage
                             print("Three Bullets upgrade with 1.5x damage obtained!")
+                        elif upgrade == "damage_boost":
+                            # Increase bullet damage
+                            for i in range(len(bullets)):
+                                bullets[i][2] *= 1.50
 
                     # Proceed to next round
                     current_round += 1
